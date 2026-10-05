@@ -11,8 +11,8 @@
 // Azimuths are measured from the front, positive towards +x.
 
 /* [View] */
-// assembly | section | hardware | body | sensor_cap | elec_lid
-part = "hardware";
+// assembly | section | hardware | body | elec_lid
+part = "body";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 
@@ -38,6 +38,18 @@ rim_wall = 7;
 bottom_hole_r = 10;
 wall = 1.6;
 
+/* [Organic shaping] */
+// corner radius of the round sensor PCBs
+pcb_r = 6;
+// rounding of the rim patches that blend a pod into the rim
+shell_r = 4;
+// how far a pod's ellipsoid is inflated past its zones' combined bounding
+// box (x, y, z), so it still fully covers their corners
+bump_k = [1.45, 1.45, 2.0];
+// same, for the two (smaller) sensor pods; z is pushed further so they read
+// as thick, ball-like bumps rather than flattened domes
+sensor_k = [1.45, 1.45, 2.3];
+
 /* [Sensors: PMW3610 + LM18-LSI] */
 // true: put the sensors as low as floor_z allows
 sensor_el_auto = true;
@@ -61,6 +73,14 @@ lens_w = 20;
 lens_h = 17;
 // chip + components above the sensor PCB
 parts_h = 3;
+// the PCB is screwed straight onto the pod through two ears beyond the lens'
+// long sides; pilot hole for an M2 self-tapping (plastite) screw
+pcb_screw_d = 1.8;
+// hole centres, either side of the optical axis (tangential)
+pcb_screw_y = lens_h / 2 + 2.2;
+// hole depth below the PCB's underside
+pcb_screw_depth = 5;
+pcb_ear_d = 5;
 
 /* [Electronics pod] */
 // lean of the pod from vertical, top away from the ball; it is then pushed
@@ -102,16 +122,38 @@ function at_ball_pt(az, el, p) =
 
 function polar_pt(az, r, z) = [r * sin(az), -r * cos(az), z];
 
-// Lowest elevation at which a set of [x, z] points in the at_ball frame
-// stays above floor_z.
+// Lowest elevation at which a set of [x, z] / [x, z, r] / [x, z, ax, az]
+// points in the at_ball frame stays above floor_z: a plain point, the centre
+// of a ball of radius r, or the centre of an ellipse with semi-axes ax (in
+// the x / cos(e) direction) and az (in the z / sin(e) direction).
 function lowest_el(pts) =
   min([for (e = [-80 : 0.5 : 60])
-         if (min([for (p = pts) zc + (R + p[1]) * sin(e) - p[0] * cos(e)]) >= floor_z) e]);
-
-function box_pts(x0, x1, z0, z1) = [for (x = [x0, x1], z = [z0, z1]) [x, z]];
+         if (min([for (p = pts)
+           let(ax = len(p) > 3 ? p[2] : (len(p) > 2 ? p[2] : 0),
+               az = len(p) > 3 ? p[3] : (len(p) > 2 ? p[2] : 0))
+           zc + (R + p[1]) * sin(e) - p[0] * cos(e)
+             - sqrt(pow(ax * cos(e), 2) + pow(az * sin(e), 2))]) >= floor_z) e]);
 
 function seg_dist(p, a, b) =
   let(d = b - a, t = max(0, min(1, (p - a) * d / (d * d)))) norm(a + t * d - p);
+
+// ---------- rounded primitives ----------
+
+// 2D rounded rectangle, centred on the origin
+module rrect(size, r) {
+  offset(r = r) offset(delta = -r) square(size, center = true);
+}
+
+// box centred on the origin with every edge rounded, as the hull of 8 balls
+module rbox(size, r) {
+  rr = min(r, size.x / 2 - eps, size.y / 2 - eps, size.z / 2 - eps);
+  hull() for (sx = [-1, 1], sy = [-1, 1], sz = [-1, 1])
+    translate([sx * (size.x / 2 - rr), sy * (size.y / 2 - rr), sz * (size.z / 2 - rr)])
+      sphere(r = rr, $fn = 32);
+}
+
+// ellipsoid centred on the origin with semi-axes r = [rx, ry, rz]
+module ellipsoid(r) { scale(r) sphere(r = 1, $fn = 48); }
 
 // Electronics pod frame: x runs from the top (USB) end down the board,
 // y is horizontal, z points away from the ball (battery at z=0, nano outside).
@@ -141,6 +183,15 @@ function at_elec_pt(p) = elec_m * [p.x, p.y, p.z, 1];
 // are centred at x=sc, i.e. shifted up-slope so the low edge is short.
 sc = -sensor_optical_offset;
 sp_in = [pcb_w + 0.6, pcb_h + 0.6];
+
+// PCB outline: rounded rectangle with a screw ear on each long side,
+// grown by m all round
+module pcb_outline(m = 0) {
+  hull() {
+    rrect([pcb_w + 2 * m, pcb_h + 2 * m], pcb_r + m);
+    for (s = [-1, 1]) translate([0, s * pcb_screw_y]) circle(d = pcb_ear_d + 2 * m);
+  }
+}
 // chip + components occupy the package footprint only
 chip_in = [16.2 + 0.6, sp_in.y];
 
@@ -154,36 +205,55 @@ module zone(z, m = 0) {
   translate([z[0] - m, -z[2] - m, z[3] - m]) cube([z[1] - z[0] + 2 * m, 2 * z[2] + 2 * m, z[4] - z[3] + 2 * m]);
 }
 
-sensor_env = [for (z = sensor_zones) each box_pts(z[0] - wall, z[1] + wall, z[3] - wall, z[4] + wall)];
+function zone_size(z, m) = [z[1] - z[0] + 2 * m, 2 * (z[2] + m), z[4] - z[3] + 2 * m];
+// semi-axes of the ellipsoid that stands in for a zone: k inflates it so it
+// still reaches the zone's (rounded) corners
+function zone_ell_r(z, m, k = bump_k) =
+  let(s = zone_size(z, m)) [s.x / 2 * k.x, s.y / 2 * k.y, s.z / 2 * k.z];
+
+// ellipsoid blob version of a zone
+module zone_ellipsoid(z, m = 0, k = bump_k) {
+  translate([(z[0] + z[1]) / 2, 0, (z[3] + z[4]) / 2]) ellipsoid(zone_ell_r(z, m, k));
+}
+
+// the ellipse centre + semi-axes of a zone, as [x, z, ax, az] for lowest_el()
+function zone_env(z, m, k = bump_k) =
+  let(r = zone_ell_r(z, m, k)) [(z[0] + z[1]) / 2, (z[3] + z[4]) / 2, r.x, r.z];
+
+// merges several zones into the one [x0, x1, y half-width, z0, z1] their
+// combined bounding box spans, so a pod's whole shell is a single ellipsoid
+// rather than a hull of several (which can read as a flat-sided capsule)
+function bbox_zone(zones) = [
+  min([for (z = zones) z[0]]), max([for (z = zones) z[1]]), max([for (z = zones) z[2]]),
+  min([for (z = zones) z[3]]), max([for (z = zones) z[4]])];
+
+sensor_env = [zone_env(bbox_zone(sensor_zones), wall, sensor_k)];
 sensor_el_ = sensor_el_auto ? lowest_el(sensor_env) : sensor_el;
 // azimuth separation for orthogonal lines of sight: cos(sep) = -tan^2(el)
 sensor_az_ = sensor_az_auto
   ? let(a = 180 - acos(max(-1, -pow(tan(sensor_el_), 2))) / 2) [a, -a]
   : sensor_az;
 
-module sensor_pod_outer() { hull() for (z = sensor_zones) zone(z, wall); }
+module sensor_pod_outer() { zone_ellipsoid(bbox_zone(sensor_zones), wall, sensor_k); }
 
-// PCB goes in from outside, through an opening the size of the PCB
+// PCB goes in from outside, through an opening the size of the PCB, and
+// is screwed down onto the ledge around the lens; its back stays exposed
 module sensor_opening() {
-  translate([sc - sp_in.x / 2, -sp_in.y / 2, pcb_top_z - pcb_t]) cube([sp_in.x, sp_in.y, 30]);
+  translate([sc, 0, pcb_top_z - pcb_t]) linear_extrude(30) pcb_outline(0.3);
 }
 
 module sensor_cavity() {
   translate([sc - lens_w / 2, -lens_h / 2, -2]) cube([lens_w, lens_h, pcb_top_z - pcb_t + 2 + eps]);
   sensor_opening();
+  for (s = [-1, 1]) translate([sc, s * pcb_screw_y, pcb_top_z - pcb_t - pcb_screw_depth])
+    cylinder(d = pcb_screw_d, h = pcb_screw_depth + eps, $fn = 16);
 }
 
-// cap fills the opening down to just above the PCB, clearing the chip zone
-module sensor_cap() {
-  difference() {
-    intersection() { sensor_pod_outer(); sensor_opening(); }
-    translate([-50, -50, -50]) cube([100, 100, 50 + pcb_top_z + 0.3]);
-    zone(sensor_zones[2], 0.15);
-  }
-}
-
+// blends the pods into the rim; entirely inside the rim's footprint, so its
+// rounding only softens the hull with the pod
 module rim_patch(az, w) {
-  rotate([0, 0, az - 90]) translate([R - 4, -w / 2, 0]) cube([rim_wall + 4, w, rim_h]);
+  rotate([0, 0, az - 90]) translate([R - 4 + (rim_wall + 4) / 2, 0, (rim_h - 2) / 2])
+    rbox([rim_wall + 4, w, rim_h + 2], shell_r);
 }
 
 // ---------- electronics pod ----------
@@ -194,9 +264,16 @@ elec_zones = [
   [0, elec_size.x, elec_size.y / 2, 0, elec_thin],
   [0, usb_zone, elec_size.y / 2, 0, elec_size.z]];
 
-module elec_pod_outer() {
-  at_elec() translate([0, elec_size.y / 2, 0]) hull() for (z = elec_zones) zone(z, wall);
+module elec_pod_shell() {
+  at_elec() translate([0, elec_size.y / 2, 0]) zone_ellipsoid(bbox_zone(elec_zones), wall);
 }
+
+// the ellipsoid itself is inflated enough in z (bump_k.z) that it dips
+// well below the table over a real area, not just a single tangent point;
+// body()'s existing flat-bottom cut then slices that into a flush base —
+// simple plane/solid clipping, none of the sliver artifacts a hull() or
+// union() with a near-degenerate helper shape can trigger in CGAL
+module elec_pod_outer() { elec_pod_shell(); }
 
 // battery and nano go in from outside, through an opening the size of the pod
 module elec_opening() { cube([elec_size.x, elec_size.y, 30]); }
@@ -233,7 +310,7 @@ module tube(pts, d) {
     hull() { translate(pts[i]) sphere(d = d, $fn = 16); translate(pts[i + 1]) sphere(d = d, $fn = 16); }
 }
 
-ch_d = 3;
+ch_d = 4;
 ch_r = R + rim_wall - 2.5;
 ch_z = rim_h - 3;
 
@@ -276,7 +353,11 @@ module supports() {
 }
 
 module sensor_board() {
-  color("darkgreen") translate([sc - pcb_w / 2, -pcb_h / 2, pcb_top_z - pcb_t]) cube([pcb_w, pcb_h, pcb_t]);
+  color("darkgreen") translate([sc, 0, pcb_top_z - pcb_t])
+    linear_extrude(pcb_t) difference() {
+      pcb_outline();
+      for (s = [-1, 1]) translate([0, s * pcb_screw_y]) circle(d = 2.2, $fn = 16);
+    }
   color("#222") translate([sc - 16.2 / 2, -10.9 / 2, pcb_top_z]) cube([16.2, 10.9, 2.5]);
   color("lightblue", 0.8) translate([sc - lens_w / 2 + 0.5, -lens_h / 2 + 0.5, lens_ref_z])
     cube([lens_w - 1, lens_h - 1, pcb_top_z - pcb_t - lens_ref_z]);
@@ -303,7 +384,6 @@ module cut(c) {
 
 module assembly(c = false) {
   color("#d8d4cc") cut(c) body();
-  color("#b8b4ac") cut(c) for (az = sensor_az_) at_ball(az, sensor_el_) sensor_cap();
   color("#b8b4ac") cut(c) elec_lid();
   color("firebrick") cut(c) translate([0, 0, zc]) sphere(r = R, $fn = 128);
   cut(c) supports();
@@ -323,7 +403,6 @@ if (part == "assembly") assembly();
 else if (part == "hardware") hardware();
 else if (part == "section") assembly(true);
 else if (part == "body") body();
-else if (part == "sensor_cap") sensor_cap();
 else if (part == "elec_lid") elec_lid();
 
 echo(str("ball top z = ", zc + R, "  sensor el = ", sensor_el_, "  sensor az = ", sensor_az_,
