@@ -13,7 +13,7 @@
 
 /* [View] */
 // assembly | exploded | section | hardware | body | elec_lid
-part = "body";
+part = "hardware";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 
@@ -88,19 +88,28 @@ pcb_screw_side = 1;
 
 /* [Electronics pod] */
 // LiPo cell 602020 (~200 mAh): [length, width, thickness]
-batt = [20, 20, 6];
-// Seeed XIAO nRF52840 (not Sense): [length, width, PCB thickness]
-xiao = [21, 17.8, 1.2];
-// ASSUMED - verify: height of the USB-C receptacle + parts on the XIAO's
-// component side, and how far the receptacle overhangs the board edge
+// sizes vary between makers; this is the larger end (22 x 19.5 x 6.5 is
+// listed), length including the protection board folded over one end
+batt = [22, 20, 6.5];
+// length of that protection-board end (kapton-taped), towards the ball
+batt_pcm = 2.5;
+// room behind it for the leads, which fold down to the XIAO's pads
+batt_leads = 1.2;
+// Seeed XIAO nRF52840 (not Sense): [length, width, PCB thickness]; sizes
+// below are from Seeed's 3D model (../pcb/3d/xiao-nrf52840.stl, converted
+// from the Sense STEP at https://files.seeedstudio.com/wiki/XIAO-BLE/seeed-studio-xiao-nrf52840-3d-model.zip;
+// same board, plus an IMU and a mic)
+xiao = [21, 17.8, 1];
+// height of the USB-C receptacle (the tallest part, 3.2) on the XIAO's
+// component side, and how far it overhangs the board edge
 xiao_parts_h = 3.3;
-usb_overhang = 1;
+usb_overhang = 1.55;
 // room for the battery wires between the XIAO's pads and the cell
 batt_gap = 0.5;
 // cavity: the XIAO lies upside down on the lid (USB-C at the bottom,
 // battery pads facing up), the battery on top of it; x runs from the USB end
 // towards the ball
-elec_size = [max(xiao.x + usb_overhang, batt.x) + 0.6, max(xiao.y, batt.y) + 0.6,
+elec_size = [max(xiao.x + usb_overhang, batt.x + batt_leads) + 0.6, max(xiao.y, batt.y) + 0.6,
              xiao_parts_h + xiao.z + batt_gap + batt.z + 0.3];
 // screw-on lid under the cavity; the pod's outer is a squashed sphere this
 // wide (seen from above), as low as it can be while covering the cavity
@@ -393,21 +402,34 @@ module sensor_board() {
 
 module electronics() {
   at_elec() {
-    color("royalblue") translate([0.3 + usb_overhang, (elec_size.y - xiao.y) / 2, xiao_parts_h]) cube(xiao);
-    color("gray") translate([0.3, elec_size.y / 2 - 4.5, xiao_parts_h - 3.2]) cube([7.5, 9, 3.2]);
-    color("silver") translate([(elec_size.x - batt.x) / 2, (elec_size.y - batt.y) / 2, xiao_parts_h + xiao.z + batt_gap]) cube(batt);
+    // the model has x from the board edge at the USB end, y centred and z up
+    // from the board's underside; it lies upside down
+    color("royalblue") translate([0.3 + usb_overhang, elec_size.y / 2, xiao_parts_h + xiao.z])
+      rotate([180, 0, 0]) import("../pcb/3d/xiao-nrf52840.stl");
+    translate([0.3, (elec_size.y - batt.y) / 2, xiao_parts_h + xiao.z + batt_gap]) lipo();
   }
 }
 
+// pouch cell in [0, batt]: the pouch, then the taped protection board at the
+// +x end with its two leads, folded down past the cell's underside
+module lipo() {
+  color("silver") translate([(batt.x - batt_pcm) / 2, batt.y / 2, batt.z / 2]) rbox([batt.x - batt_pcm, batt.y, batt.z], 1.2);
+  color("gold") translate([batt.x - batt_pcm / 2 - 0.1, batt.y / 2, batt.z / 2])
+    rbox([batt_pcm + 0.2, batt.y - 2, batt.z * 0.75], 0.6);
+  for (s = [-1, 1]) color(s < 0 ? "black" : "red")
+    translate([batt.x + 0.5, batt.y / 2 + s * 2, 0]) tube([[-0.7, 0, batt.z / 2], [0, 0, batt.z / 2 - 0.5], [0, 0, -batt_gap]], 0.8);
+}
+
 // cut = true removes everything on one side of the vertical plane at section_az;
-// each part is rendered separately so it keeps its colour
-module cut(c) {
-  if (c) render() difference() {
-    children();
-    rotate([0, 0, section_az - 90]) translate([-100, eps, -50]) cube([200, 100, 200]);
-  }
+// each part is rendered separately so it keeps its colour, except (r = false)
+// ones built from imported meshes that aren't closed, which CGAL can't render
+module cut(c, r = true) {
+  if (c && r) render() difference() { children(); cut_half(); }
+  else if (c) difference() { children(); cut_half(); }
   else children();
 }
+
+module cut_half() { rotate([0, 0, section_az - 90]) translate([-100, eps, -50]) cube([200, 100, 200]); }
 
 module assembly(c = false) {
   color("#d8d4cc") cut(c) body();
@@ -415,7 +437,7 @@ module assembly(c = false) {
   color("firebrick") cut(c) translate([0, 0, zc]) sphere(r = R, $fn = 128);
   cut(c) supports();
   cut(c) for (az = sensor_az_) at_ball(az, sensor_el_) sensor_board();
-  cut(c) electronics();
+  cut(c, false) electronics();
 }
 
 // screw shank along -z from z=0, head at z=0
