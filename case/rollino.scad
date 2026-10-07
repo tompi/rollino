@@ -13,7 +13,7 @@
 
 /* [View] */
 // assembly | exploded | section | hardware | body | elec_lid
-part = "hardware";
+part = "body";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 
@@ -106,6 +106,9 @@ elec_size = [max(xiao.x + usb_overhang, batt.x) + 0.6, max(xiao.y, batt.y) + 0.6
 // wide (seen from above), as low as it can be while covering the cavity
 elec_lid_t = 2;
 elec_dome_d = 46;
+// how far the dome's centre sits behind the cavity's, towards the ball, so
+// less of it sticks out in front (the cavity itself stays put)
+elec_dome_back = 3.5;
 // lid screws (M2 countersunk) either side of the cavity, from its centre line
 elec_screw_y = max(xiao.y, batt.y) / 2 + 4.8;
 // plug overmold recess in front of the receptacle: [width, height]
@@ -264,13 +267,14 @@ module rim_patch(az, w) {
 // ---------- electronics pod ----------
 
 // squashed sphere around the cavity + wall (sides and roof) + lid: its
-// height is the lowest that still covers the box corners at elec_dome_d
+// height is the lowest that still covers the (front) box corners at
+// elec_dome_d
 elec_box = [elec_size.x + 2 * wall, elec_size.y + 2 * wall, elec_lid_t + elec_size.z + wall];
 elec_dome_r = [elec_dome_d / 2, elec_dome_d / 2,
-  elec_box.z / 2 / sqrt(1 - (pow(elec_box.x, 2) + pow(elec_box.y, 2)) / pow(elec_dome_d, 2))];
+  elec_box.z / 2 / sqrt(1 - (pow(elec_box.x + 2 * elec_dome_back, 2) + pow(elec_box.y, 2)) / pow(elec_dome_d, 2))];
 
 module elec_pod_outer() {
-  at_elec() translate([elec_size.x / 2, elec_size.y / 2, -elec_lid_t + elec_box.z / 2]) ellipsoid(elec_dome_r);
+  at_elec() translate([elec_size.x / 2 + elec_dome_back, elec_size.y / 2, -elec_lid_t + elec_box.z / 2]) ellipsoid(elec_dome_r);
 }
 
 module elec_pod_blob() { hull() { elec_pod_outer(); rim_patch(0, elec_size.y + 2 * wall); } }
@@ -459,4 +463,4 @@ else if (part == "elec_lid") elec_lid();
 
 echo(str("ball top z = ", zc + R, "  sensor el = ", sensor_el_, "  sensor az = ", sensor_az_,
           "  elec pod top z = ", at_elec_pt([0, 0, -elec_lid_t + elec_box.z / 2]).z + elec_dome_r.z,
-          "  front y = ", at_elec_pt([elec_size.x / 2, 0, 0]).y - elec_dome_r.x));
+          "  front y = ", at_elec_pt([elec_size.x / 2 + elec_dome_back, 0, 0]).y - elec_dome_r.x));
