@@ -400,12 +400,18 @@ module sensor_board() {
   color("lightblue", 0.8) translate([0, 0, lens_ref_z - 1]) cylinder(d = 5, h = 1);
 }
 
-module electronics() {
+// model = false draws the XIAO as plain boxes, which (unlike the imported
+// mesh, which isn't closed) CGAL can cut for the section view
+module electronics(model = true) {
   at_elec() {
     // the model has x from the board edge at the USB end, y centred and z up
     // from the board's underside; it lies upside down
-    color("royalblue") translate([0.3 + usb_overhang, elec_size.y / 2, xiao_parts_h + xiao.z])
-      rotate([180, 0, 0]) import("../pcb/3d/xiao-nrf52840.stl");
+    color("royalblue") translate([0.3 + usb_overhang, elec_size.y / 2, xiao_parts_h + xiao.z]) rotate([180, 0, 0])
+      if (model) import("../pcb/3d/xiao-nrf52840.stl");
+      else {
+        translate([0, -xiao.y / 2, 0]) cube(xiao);
+        translate([-usb_overhang, -4.5, xiao.z]) cube([7.5, 9, 3.2]);
+      }
     translate([0.3, (elec_size.y - batt.y) / 2, xiao_parts_h + xiao.z + batt_gap]) lipo();
   }
 }
@@ -421,11 +427,9 @@ module lipo() {
 }
 
 // cut = true removes everything on one side of the vertical plane at section_az;
-// each part is rendered separately so it keeps its colour, except (r = false)
-// ones built from imported meshes that aren't closed, which CGAL can't render
-module cut(c, r = true) {
-  if (c && r) render() difference() { children(); cut_half(); }
-  else if (c) difference() { children(); cut_half(); }
+// each part is rendered separately so it keeps its colour
+module cut(c) {
+  if (c) render() difference() { children(); cut_half(); }
   else children();
 }
 
@@ -437,7 +441,7 @@ module assembly(c = false) {
   color("firebrick") cut(c) translate([0, 0, zc]) sphere(r = R, $fn = 128);
   cut(c) supports();
   cut(c) for (az = sensor_az_) at_ball(az, sensor_el_) sensor_board();
-  cut(c, false) electronics();
+  cut(c) electronics(!c);
 }
 
 // screw shank along -z from z=0, head at z=0
