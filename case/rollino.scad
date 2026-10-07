@@ -449,21 +449,17 @@ module screw(l, head_d = 3.8) {
 }
 
 // every part pulled apart along the way it goes in: the ball and support
-// balls up, the sensor boards (and their screws) in towards the ball, the
+// balls up, the sensor boards in towards the ball, the
 // electronics and the screwed-on lid down out of the pod
 module exploded(d = 25) {
   color("#d8d4cc") body();
   color("firebrick") translate([0, 0, zc + 2.2 * d]) sphere(r = R, $fn = 128);
   translate([0, 0, d]) supports();
-  for (az = sensor_az_) at_ball(az, sensor_el_) {
-    translate([0, 0, -0.8 * d]) sensor_board();
-    translate([sc, pcb_screw_side * sign(az) * pcb_screw_y, pcb_top_z - pcb_t - 1.6 * d])
-      rotate([180, 0, 0]) screw(8);
-  }
+  for (az = sensor_az_) at_ball(az, sensor_el_) translate([0, 0, -0.8 * d]) sensor_board();
   translate([0, 0, -d]) electronics();
   translate([0, 0, -2 * d]) {
     color("#b8b4ac") elec_lid();
-    at_elec() for (s = [-1, 1]) translate([elec_size.x / 2, elec_size.y / 2 + s * elec_screw_y, -elec_lid_t - 0.6 * d])
+    at_elec() for (s = [-1, 1]) translate([elec_size.x / 2, elec_size.y / 2 + s * elec_screw_y, -elec_lid_t - 4 - 6])
       rotate([180, 0, 0]) screw(6, 4.2);
   }
 }
