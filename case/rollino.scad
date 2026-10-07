@@ -12,7 +12,7 @@
 
 /* [View] */
 // assembly | section | hardware | body | elec_lid
-part = "body";
+part = "assembly";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 
@@ -73,14 +73,17 @@ lens_w = 20;
 lens_h = 17;
 // chip + components above the sensor PCB
 parts_h = 3;
-// the PCB is screwed straight onto the pod through two ears beyond the lens'
-// long sides; pilot hole for an M2 self-tapping (plastite) screw
+// the PCB has a screw ear on each of the lens' long sides; it goes in from
+// the ball side and one M2 self-tapping (plastite) screw through an ear
+// holds it against the back of its pocket; pilot hole diameter
 pcb_screw_d = 1.8;
 // hole centres, either side of the optical axis (tangential)
 pcb_screw_y = lens_h / 2 + 2.2;
-// hole depth below the PCB's underside
+// pilot hole depth behind the PCB's back face
 pcb_screw_depth = 5;
 pcb_ear_d = 5;
+// which ear is screwed down: 1 = the one towards the back (az 180), -1 = towards the front
+pcb_screw_side = 1;
 
 /* [Electronics pod] */
 // lean of the pod from vertical, top away from the ball; it is then pushed
@@ -236,16 +239,17 @@ sensor_az_ = sensor_az_auto
 
 module sensor_pod_outer() { zone_ellipsoid(bbox_zone(sensor_zones), wall, sensor_k); }
 
-// PCB goes in from outside, through an opening the size of the PCB, and
-// is screwed down onto the ledge around the lens; its back stays exposed
-module sensor_opening() {
-  translate([sc, 0, pcb_top_z - pcb_t]) linear_extrude(30) pcb_outline(0.3);
-}
-
-module sensor_cavity() {
-  translate([sc - lens_w / 2, -lens_h / 2, -2]) cube([lens_w, lens_h, pcb_top_z - pcb_t + 2 + eps]);
-  sensor_opening();
-  for (s = [-1, 1]) translate([sc, s * pcb_screw_y, pcb_top_z - pcb_t - pcb_screw_depth])
+// PCB + lens go in from the ball side, through a pocket the size of the PCB,
+// and are screwed (through ear s) against the pocket's back face, where a
+// closed cavity clears the chip and a boss behind the ear takes the screw;
+// the pod's back stays solid
+module sensor_cavity(s = 1) {
+  translate([sc, 0, -5]) linear_extrude(pcb_top_z + 5) pcb_outline(0.3);
+  difference() {
+    zone(sensor_zones[2], 0.3);
+    translate([sc, s * pcb_screw_y, 0]) cylinder(d = pcb_ear_d, h = 20);
+  }
+  translate([sc, s * pcb_screw_y, pcb_top_z - eps])
     cylinder(d = pcb_screw_d, h = pcb_screw_depth + eps, $fn = 16);
 }
 
@@ -338,7 +342,7 @@ module body() {
     translate([0, 0, zc]) sphere(r = R + ball_clear, $fn = 128);
     translate([0, 0, -1]) cylinder(r = bottom_hole_r, h = zc);
     translate([-100, -100, -50]) cube([200, 200, 50]);     // flat bottom
-    for (az = sensor_az_) at_ball(az, sensor_el_) sensor_cavity();
+    for (az = sensor_az_) at_ball(az, sensor_el_) sensor_cavity(pcb_screw_side * sign(az));
     elec_cavity();
     for (az = sensor_az_) wire_channel(az);
     for (az = support_az) support_hole(az);
