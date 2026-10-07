@@ -4,15 +4,16 @@
 // Two PMW3610 sensors sit in pods at the back-left/back-right, looking up at
 // the ball from as low as they fit; their azimuths are chosen so the lines of sight are
 // ~90 deg apart, so X, Y and twist are all observable.
-// A nice!nano + LiPo stand in a pod at the front, USB-C pointing up,
-// pushed down to the table and in against the ball.
+// A XIAO nRF52840 + LiPo lie flat in a squashed-sphere pod at the front,
+// USB-C pointing forward, pushed in against the ball; they go in from
+// below, behind a lid screwed on from underneath.
 //
 // Coordinates: table is z=0, front (towards the user) is -y.
 // Azimuths are measured from the front, positive towards +x.
 
 /* [View] */
-// assembly | section | hardware | body | elec_lid
-part = "assembly";
+// assembly | exploded | section | hardware | body | elec_lid
+part = "hardware";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 
@@ -86,20 +87,29 @@ pcb_ear_d = 5;
 pcb_screw_side = 1;
 
 /* [Electronics pod] */
-// lean of the pod from vertical, top away from the ball; it is then pushed
-// down to floor_z and in against the ball
-elec_tilt = 45;
-// LiPo cell, e.g. 402030 (~200 mAh): [length, width, thickness]
-batt = [30, 20, 4];
-// nice!nano (33.3 x 18) on top of the battery; x runs from the USB end down
-elec_size = [34.5, max(18, batt.y) + 0.6, batt.z + 5.8];
-// nice!nano PCB underside, and USB-C receptacle centre, above the pod floor
-nano_z = batt.z + 0.8;
-usb_z = nano_z + 1.2 + 1.6;
-// pod thickness away from the USB end: battery + nano + low components
-elec_thin = nano_z + 1.2 + 1.2;
-// length of the full-height USB-C zone at the top end
-usb_zone = 9.5;
+// LiPo cell 602020 (~200 mAh): [length, width, thickness]
+batt = [20, 20, 6];
+// Seeed XIAO nRF52840 (not Sense): [length, width, PCB thickness]
+xiao = [21, 17.8, 1.2];
+// ASSUMED - verify: height of the USB-C receptacle + parts on the XIAO's
+// component side, and how far the receptacle overhangs the board edge
+xiao_parts_h = 3.3;
+usb_overhang = 1;
+// room for the battery wires between the XIAO's pads and the cell
+batt_gap = 0.5;
+// cavity: the XIAO lies upside down on the lid (USB-C at the bottom,
+// battery pads facing up), the battery on top of it; x runs from the USB end
+// towards the ball
+elec_size = [max(xiao.x + usb_overhang, batt.x) + 0.6, max(xiao.y, batt.y) + 0.6,
+             xiao_parts_h + xiao.z + batt_gap + batt.z + 0.3];
+// screw-on lid under the cavity; the pod's outer is a squashed sphere this
+// wide (seen from above), as low as it can be while covering the cavity
+elec_lid_t = 2;
+elec_dome_d = 46;
+// lid screws (M2 countersunk) either side of the cavity, from its centre line
+elec_screw_y = max(xiao.y, batt.y) / 2 + 4.8;
+// plug overmold recess in front of the receptacle: [width, height]
+usb_plug = [13.5, 7.5];
 // lowest point of any pod above the table
 floor_z = 0;
 
@@ -158,23 +168,14 @@ module rbox(size, r) {
 // ellipsoid centred on the origin with semi-axes r = [rx, ry, rz]
 module ellipsoid(r) { scale(r) sphere(r = 1, $fn = 48); }
 
-// Electronics pod frame: x runs from the top (USB) end down the board,
-// y is horizontal, z points away from the ball (battery at z=0, nano outside).
-// It lives in the vertical plane at azimuth 0; u is the distance in front of
-// the ball's axis.
-et = elec_tilt;
-elec_L = elec_size.x + wall;
-// the bottom end only needs the thin part of the pod
-elec_T = elec_thin + wall;
-// height of the frame origin so the lowest bottom corner sits on floor_z
-elec_zo = floor_z + elec_L * cos(et) + max(-wall * sin(et), elec_T * sin(et));
-function elec_uz(o, p) = [o - p.x * sin(et) + p.z * cos(et), elec_zo - p.x * cos(et) - p.z * sin(et)];
-// slide in until the inner face touches the ball clearance
-elec_uo = min([for (o = [0 : 0.1 : 120])
-  if (seg_dist([0, zc], elec_uz(o, [-wall, 0, -wall]), elec_uz(o, [elec_L, 0, -wall])) >= R + ball_clear) o]);
-elec_m = [[0, 1, 0, -elec_size.y / 2],
-          [sin(et), 0, -cos(et), -elec_uo],
-          [-cos(et), 0, -sin(et), elec_zo]];
+// Electronics pod frame: z=0 is the cavity floor (the lid's top), x runs
+// from the USB end towards the ball, y across; the cavity is slid in until
+// its top back edge is a wall away from the ball clearance
+elec_top = floor_z + elec_lid_t + elec_size.z;
+elec_back = -sqrt(pow(R + ball_clear + wall, 2) - pow(max(0, zc - elec_top), 2));
+elec_m = [[0, -1, 0, elec_size.y / 2],
+          [1, 0, 0, elec_back - elec_size.x],
+          [0, 0, 1, floor_z + elec_lid_t]];
 
 module at_elec() { multmatrix(elec_m) children(); }
 
@@ -262,43 +263,59 @@ module rim_patch(az, w) {
 
 // ---------- electronics pod ----------
 
-// [x0, x1, y half-width, z0, z1] in the elec frame (y centred on elec_size.y / 2):
-// battery + nano over the full length, full height only around the USB-C
-elec_zones = [
-  [0, elec_size.x, elec_size.y / 2, 0, elec_thin],
-  [0, usb_zone, elec_size.y / 2, 0, elec_size.z]];
+// squashed sphere around the cavity + wall (sides and roof) + lid: its
+// height is the lowest that still covers the box corners at elec_dome_d
+elec_box = [elec_size.x + 2 * wall, elec_size.y + 2 * wall, elec_lid_t + elec_size.z + wall];
+elec_dome_r = [elec_dome_d / 2, elec_dome_d / 2,
+  elec_box.z / 2 / sqrt(1 - (pow(elec_box.x, 2) + pow(elec_box.y, 2)) / pow(elec_dome_d, 2))];
 
-module elec_pod_shell() {
-  at_elec() translate([0, elec_size.y / 2, 0]) zone_ellipsoid(bbox_zone(elec_zones), wall);
+module elec_pod_outer() {
+  at_elec() translate([elec_size.x / 2, elec_size.y / 2, -elec_lid_t + elec_box.z / 2]) ellipsoid(elec_dome_r);
 }
 
-// the ellipsoid itself is inflated enough in z (bump_k.z) that it dips
-// well below the table over a real area, not just a single tangent point;
-// body()'s existing flat-bottom cut then slices that into a flush base —
-// simple plane/solid clipping, none of the sliver artifacts a hull() or
-// union() with a near-degenerate helper shape can trigger in CGAL
-module elec_pod_outer() { elec_pod_shell(); }
-
-// battery and nano go in from outside, through an opening the size of the pod
-module elec_opening() { cube([elec_size.x, elec_size.y, 30]); }
+module elec_pod_blob() { hull() { elec_pod_outer(); rim_patch(0, elec_size.y + 2 * wall); } }
 
 module elec_cavity() {
   at_elec() {
-    elec_opening();
-    // USB-C on the top (x=0) end, nano sits outside the battery
-    translate([1, elec_size.y / 2, usb_z]) rotate([0, -90, 0])
-      hull() for (d = [-3, 3]) translate([0, d, 0]) cylinder(d = 3.8, h = wall + 2);
+    cube(elec_size);
+    // plug overmold recess right in front of the receptacle, open to the table
+    usb_zc = xiao_parts_h - 1.6;
+    translate([eps, elec_size.y / 2, 0]) rotate([0, -90, 0]) hull()
+      for (z = [usb_zc, -elec_lid_t - 5], d = [-1, 1])
+        translate([z, d * (usb_plug.x - usb_plug.y) / 2, 0]) cylinder(d = usb_plug.y, h = 30);
   }
 }
 
-// lid fills the opening down to the top of the nano's components, clearing the USB-C zone
+// the slab of the pod under the cavity, outside the rim, plus a tongue under
+// the whole cavity so everything can go in from below; g shrinks it, for
+// the lid's fit
+module elec_lid_region(g = 0) {
+  difference() {
+    intersection() {
+      elec_pod_blob();
+      translate([-100, -100, floor_z - 1]) cube([200, 200, 1 + elec_lid_t - g]);
+    }
+    translate([0, 0, floor_z - 2]) cylinder(r = R + rim_wall + g, h = elec_lid_t + 4, $fn = 128);
+  }
+  at_elec() translate([-1 + g, -1 + g, -elec_lid_t - 1]) cube([elec_size.x + 2 - 2 * g, elec_size.y + 2 - 2 * g, elec_lid_t + 1 - g]);
+}
+
+module elec_screws(body) {
+  at_elec() for (s = [-1, 1]) translate([elec_size.x / 2, elec_size.y / 2 + s * elec_screw_y, 0])
+    if (body) translate([0, 0, -eps]) cylinder(d = pcb_screw_d, h = 6, $fn = 16);
+    else {
+      translate([0, 0, -elec_lid_t - 1]) cylinder(d = 2.4, h = elec_lid_t + 2, $fn = 16);
+      translate([0, 0, -elec_lid_t - eps]) cylinder(d1 = 4.2, d2 = 2.4, h = 0.9, $fn = 24);
+    }
+}
+
+// lid: screwed on from underneath, holds the XIAO + battery up in the cavity
 module elec_lid() {
   difference() {
-    intersection() { elec_pod_outer(); at_elec() elec_opening(); }
-    at_elec() {
-      translate([-50, -50, -50]) cube([200, 200, 50 + elec_thin]);
-      translate([0, elec_size.y / 2, 0]) zone(elec_zones[1], 0.15);
-    }
+    elec_lid_region(0.15);
+    translate([-100, -100, -50]) cube([200, 200, 50]);     // flat bottom, as body()
+    elec_cavity();
+    elec_screws(false);
   }
 }
 
@@ -324,7 +341,7 @@ module wire_channel(az) {
   pts = concat(
     [at_ball_pt(az, sensor_el_, [sc + pcb_w / 2 - 2, 0, pcb_top_z])],
     arc,
-    [at_elec_pt([elec_size.x - 4, elec_size.y / 2 + sgn * 6, 2])]);
+    [at_elec_pt([elec_size.x - 4, elec_size.y / 2 + sgn * 6, elec_size.z - 3])]);
   tube(pts, ch_d);
 }
 
@@ -337,13 +354,15 @@ module body() {
     union() {
       rim();
       for (az = sensor_az_) hull() { at_ball(az, sensor_el_) sensor_pod_outer(); rim_patch(az, pcb_h); }
-      hull() { elec_pod_outer(); rim_patch(0, elec_size.y + 2 * wall); }
+      elec_pod_blob();
     }
     translate([0, 0, zc]) sphere(r = R + ball_clear, $fn = 128);
     translate([0, 0, -1]) cylinder(r = bottom_hole_r, h = zc);
     translate([-100, -100, -50]) cube([200, 200, 50]);     // flat bottom
     for (az = sensor_az_) at_ball(az, sensor_el_) sensor_cavity(pcb_screw_side * sign(az));
     elec_cavity();
+    elec_lid_region();
+    elec_screws(true);
     for (az = sensor_az_) wire_channel(az);
     for (az = support_az) support_hole(az);
   }
@@ -370,9 +389,9 @@ module sensor_board() {
 
 module electronics() {
   at_elec() {
-    color("silver") translate([elec_size.x - batt.x - 0.3, (elec_size.y - batt.y) / 2, 0.2]) cube(batt);
-    color("royalblue") translate([(elec_size.x - 33.3) / 2, (elec_size.y - 18) / 2, nano_z]) cube([33.3, 18, 1.2]);
-    color("gray") translate([0.4, elec_size.y / 2 - 4.5, nano_z + 1.2]) cube([7.5, 9, 3.2]);
+    color("royalblue") translate([0.3 + usb_overhang, (elec_size.y - xiao.y) / 2, xiao_parts_h]) cube(xiao);
+    color("gray") translate([0.3, elec_size.y / 2 - 4.5, xiao_parts_h - 3.2]) cube([7.5, 9, 3.2]);
+    color("silver") translate([(elec_size.x - batt.x) / 2, (elec_size.y - batt.y) / 2, xiao_parts_h + xiao.z + batt_gap]) cube(batt);
   }
 }
 
@@ -395,6 +414,34 @@ module assembly(c = false) {
   cut(c) electronics();
 }
 
+// screw shank along -z from z=0, head at z=0
+module screw(l, head_d = 3.8) {
+  color("dimgray") {
+    translate([0, 0, -l]) cylinder(d = 2, h = l, $fn = 16);
+    cylinder(d = head_d, h = 1.2, $fn = 24);
+  }
+}
+
+// every part pulled apart along the way it goes in: the ball and support
+// balls up, the sensor boards (and their screws) in towards the ball, the
+// electronics and the screwed-on lid down out of the pod
+module exploded(d = 25) {
+  color("#d8d4cc") body();
+  color("firebrick") translate([0, 0, zc + 2.2 * d]) sphere(r = R, $fn = 128);
+  translate([0, 0, d]) supports();
+  for (az = sensor_az_) at_ball(az, sensor_el_) {
+    translate([0, 0, -0.8 * d]) sensor_board();
+    translate([sc, pcb_screw_side * sign(az) * pcb_screw_y, pcb_top_z - pcb_t - 1.6 * d])
+      rotate([180, 0, 0]) screw(8);
+  }
+  translate([0, 0, -d]) electronics();
+  translate([0, 0, -2 * d]) {
+    color("#b8b4ac") elec_lid();
+    at_elec() for (s = [-1, 1]) translate([elec_size.x / 2, elec_size.y / 2 + s * elec_screw_y, -elec_lid_t - 0.6 * d])
+      rotate([180, 0, 0]) screw(6, 4.2);
+  }
+}
+
 // ball, sensor boards and electronics only, over a translucent table
 module hardware() {
   color("firebrick") translate([0, 0, zc]) sphere(r = R, $fn = 128);
@@ -404,10 +451,12 @@ module hardware() {
 }
 
 if (part == "assembly") assembly();
+else if (part == "exploded") exploded();
 else if (part == "hardware") hardware();
 else if (part == "section") assembly(true);
 else if (part == "body") body();
 else if (part == "elec_lid") elec_lid();
 
 echo(str("ball top z = ", zc + R, "  sensor el = ", sensor_el_, "  sensor az = ", sensor_az_,
-          "  elec pod top z = ", at_elec_pt([-wall, 0, elec_T]).z, " front u = ", elec_uo));
+          "  elec pod top z = ", at_elec_pt([0, 0, -elec_lid_t + elec_box.z / 2]).z + elec_dome_r.z,
+          "  front y = ", at_elec_pt([elec_size.x / 2, 0, 0]).y - elec_dome_r.x));
