@@ -17,7 +17,7 @@
 /* [View] */
 // assembly | exploded | section | hardware | body | base_cover |
 // base_pcb / sensor_pcb (2D board outlines, for ../pcb/gen/generate.py)
-part = "body";
+part = "assembly";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 
@@ -155,7 +155,7 @@ base_pcb_t = 1.6;
 // band round the ball's bottom hole, from under the front pod to under
 // each sensor: [inner, outer] radius; inside it the ball's cup and the
 // support balls' holes come down close, outside it the rim's foot is rounded
-base_band_r = [24, 32];
+base_band_r = [24, 32.5];
 // the band ends just past an FPC connector under each sensor, mouth facing
 // out (the ribbon comes down just outside it); pocket over it, for it and
 // the ribbon's bend: [beyond the mouth, height]

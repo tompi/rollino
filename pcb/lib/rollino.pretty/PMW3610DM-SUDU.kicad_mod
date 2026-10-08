@@ -77,4 +77,5 @@
       e98da8ab-d839-4bc4-8f6d-80093b69a7cd
     )
   )
+  (model "${KIPRJMOD}/../lib/rollino.3dshapes/PMW3610DM-SUDU.wrl" (offset (xyz 0 0 0)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 0)))
 )

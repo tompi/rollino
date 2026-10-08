@@ -18,8 +18,10 @@ it, held by the same screws.
   placement, battery, ...). Set `part` to `assembly`, `exploded`, `hardware`, `section`,
   or `body` / `base_cover` for printable parts.
 - `case/renders/` - preview renders.
-- `pcb/` - KiCad projects for the sensor boards and the base board, with
-  schematics, generated from the case model (see [pcb/readme.md](pcb/readme.md)).
+- `pcb/` - KiCad projects for the sensor boards and the base board: schematics
+  and routed boards, generated from the case model (see [pcb/readme.md](pcb/readme.md)).
+
+![The PCBs, top and bottom](pcb/renders/pcbs.png)
 - `datasheets/` - component datasheets. The PMW3610 datasheet is available
   [here](https://www.epsglobal.com/Media-Library/EPSGlobal/Products/files/pixart/PMW3610DM-SUDU.pdf?ext=.pdf).
 

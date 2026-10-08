@@ -48,3 +48,8 @@ adapter/adapter-backups
 !pcb/lib/rollino.kicad_sym
 !pcb/*/sym-lib-table
 !pcb/*/fp-lib-table
+
+# Freerouting logs, Python caches, KiCad lock files
+logs/
+__pycache__/
+*.lck

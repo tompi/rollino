@@ -1,4 +1,4 @@
-(kicad_sch (version 20231120) (generator "rollino-gen") (generator_version "8.0") (uuid "22570663-a3bb-4856-b471-6ccb7bbef654") (paper "A4")
+(kicad_sch (version 20231120) (generator "rollino-gen") (generator_version "8.0") (uuid "39a95762-bb94-4e09-a8fe-da8fa99d7ee5") (paper "A4")
 (title_block (title "Rollino base board") (rev "1") (comment 1 "XIAO nRF52840 soldered upside down (parts through the cutout),")(comment 2 "FPC connectors to the two sensor boards, pads for optional buttons."))
 (lib_symbols
 (symbol "rollino:XIAO_nRF52840" (pin_names (offset 1.016)) (exclude_from_sim no) (in_bom yes) (on_board yes)
@@ -240,7 +240,7 @@
 			)
 		)
 	)
-(symbol "Connector_Generic:Conn_01x06"
+(symbol "Connector_Generic_MountingPin:Conn_01x06_MountingPin"
 		(pin_names
 			(offset 1.016) hide)
 		(exclude_from_sim no)
@@ -254,12 +254,13 @@
 				)
 			)
 		)
-		(property "Value" "Conn_01x06"
-			(at 0 -10.16 0)
+		(property "Value" "Conn_01x06_MountingPin"
+			(at 1.27 -10.16 0)
 			(effects
 				(font
 					(size 1.27 1.27)
 				)
+				(justify left)
 			)
 		)
 		(property "Footprint" ""
@@ -280,7 +281,7 @@
 				(hide yes)
 			)
 		)
-		(property "Description" "Generic connector, single row, 01x06, script generated (kicad-library-utils/schlib/autogen/connector/)"
+		(property "Description" "Generic connectable mounting pin connector, single row, 01x06, script generated (kicad-library-utils/schlib/autogen/connector/)"
 			(at 0 0 0)
 			(effects
 				(font
@@ -298,7 +299,7 @@
 				(hide yes)
 			)
 		)
-		(property "ki_fp_filters" "Connector*:*_1x??_*"
+		(property "ki_fp_filters" "Connector*:*_1x??-1MP*"
 			(at 0 0 0)
 			(effects
 				(font
@@ -307,7 +308,7 @@
 				(hide yes)
 			)
 		)
-		(symbol "Conn_01x06_1_1"
+		(symbol "Conn_01x06_MountingPin_1_1"
 			(rectangle
 				(start -1.27 -7.493)
 				(end 0 -7.747)
@@ -383,6 +384,26 @@
 				)
 				(fill
 					(type background)
+				)
+			)
+			(polyline
+				(pts
+					(xy -1.016 -9.652) (xy 1.016 -9.652)
+				)
+				(stroke
+					(width 0.1524)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+			(text "Mounting"
+				(at 0 -9.271 0)
+				(effects
+					(font
+						(size 0.381 0.381)
+					)
 				)
 			)
 			(pin passive line
@@ -486,6 +507,24 @@
 					)
 				)
 				(number "6"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+			)
+			(pin passive line
+				(at 0 -12.7 90)
+				(length 3.048)
+				(name "MountPin"
+					(effects
+						(font
+							(size 1.27 1.27)
+						)
+					)
+				)
+				(number "MP"
 					(effects
 						(font
 							(size 1.27 1.27)
@@ -597,6 +636,88 @@
 			)
 		)
 	)
+(symbol "Mechanical:MountingHole"
+		(pin_names
+			(offset 1.016)
+		)
+		(exclude_from_sim yes)
+		(in_bom no)
+		(on_board yes)
+		(property "Reference" "H"
+			(at 0 5.08 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "MountingHole"
+			(at 0 3.175 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" "Mounting Hole without connection"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "ki_keywords" "mounting hole"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "ki_fp_filters" "MountingHole*"
+			(at 0 0 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(symbol "MountingHole_0_1"
+			(circle
+				(center 0 0)
+				(radius 1.27)
+				(stroke
+					(width 1.27)
+					(type default)
+				)
+				(fill
+					(type none)
+				)
+			)
+		)
+	)
 (symbol "power:PWR_FLAG"
 		(power)
 		(pin_numbers hide)
@@ -694,75 +815,83 @@
 		)
 	)
 )
-(symbol (lib_id "rollino:XIAO_nRF52840") (at 109.22 93.98 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "3298d7bf-bf84-403e-9cfb-cef17ed8a23f") (property "Reference" "U1" (at 109.22 82.55 0) (effects (font (size 1.27 1.27))))(property "Value" "XIAO nRF52840" (at 109.22 105.41 0) (effects (font (size 1.27 1.27))))(property "Footprint" "rollino:XIAO_nRF52840_upside_down" (at 109.22 93.98 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 109.22 93.98 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "13e18389-2701-439a-979d-8bfd95bc6de5"))(pin "2" (uuid "ce96e4b4-149c-47bf-b509-3a088f4186fd"))(pin "3" (uuid "2ea7aa9c-af93-4dc0-9eab-8ce61352d1e9"))(pin "4" (uuid "6c636b1f-b975-464c-a05a-eed614a90792"))(pin "5" (uuid "ccbc8775-3ce2-4aa3-9a35-ade6fe737b79"))(pin "6" (uuid "8e59eb56-e165-4de4-bf76-cce3cbb671dd"))(pin "7" (uuid "95538c41-cf71-45c0-b190-d83fbe10f079"))(pin "8" (uuid "a2556cc2-776a-4de1-9c1b-fcb8e2551c97"))(pin "9" (uuid "38855220-7f39-472e-99a3-965d7f8f8bbd"))(pin "10" (uuid "43a51d79-bfa9-42b6-8809-b5b122f44bfa"))(pin "11" (uuid "83c734f5-9e2f-4709-8ba3-f58beb21ea89"))(pin "12" (uuid "323ba41e-e47e-4b3a-a7d8-4e1e9a475872"))(pin "13" (uuid "7d3f3d31-cbbb-4941-a59b-790e7d11c396"))(pin "14" (uuid "ce484d8f-bb37-4329-bc31-b33965936abf")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "U1") (unit 1)))))
-(wire (pts (xy 96.52 86.36) (xy 93.98 86.36)) (stroke (width 0) (type default)) (uuid "3a36e09a-e33a-43b8-b949-d130a0358c11"))
-(label "BTN_L" (at 93.98 86.36 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "c58a3d4e-f9b9-4893-bdda-8966193e5dfb"))
-(wire (pts (xy 96.52 88.9) (xy 93.98 88.9)) (stroke (width 0) (type default)) (uuid "76d3ffeb-a269-4a00-b886-ebc710d369ed"))
-(label "BTN_R" (at 93.98 88.9 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "cb2c9068-7175-4bbe-9c93-3980e8a74b41"))
-(wire (pts (xy 96.52 91.44) (xy 93.98 91.44)) (stroke (width 0) (type default)) (uuid "83d84b20-06bf-42a7-b5ce-e53b5a4a0a94"))
-(label "MOTION_L" (at 93.98 91.44 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "d2785745-aa29-4574-a2a3-ce4a14229ba0"))
-(wire (pts (xy 96.52 93.98) (xy 93.98 93.98)) (stroke (width 0) (type default)) (uuid "9be73482-c746-45db-a857-8f2d5834af00"))
-(label "MOTION_R" (at 93.98 93.98 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "8e86b62d-e50a-4e9c-aec6-1df19d49f761"))
-(no_connect (at 96.52 96.52) (uuid "368083ed-ddcf-4c89-b51e-efe5ad78e7b2"))
-(no_connect (at 96.52 99.06) (uuid "64f04142-b3c7-44b0-b03d-88061396856b"))
-(wire (pts (xy 96.52 101.6) (xy 93.98 101.6)) (stroke (width 0) (type default)) (uuid "84dc8c83-afcb-492d-9bfd-002ce4a09d7e"))
-(label "NCS_L" (at 93.98 101.6 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "24028e85-e256-4335-b1a0-c14a1f00f849"))
-(wire (pts (xy 121.92 101.6) (xy 124.46 101.6)) (stroke (width 0) (type default)) (uuid "a6e5b4be-b1e4-4e65-ac02-7a90b2d02013"))
-(label "NCS_R" (at 124.46 101.6 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "17607cfb-688f-41e5-9679-fa0a58eceb10"))
-(wire (pts (xy 121.92 99.06) (xy 124.46 99.06)) (stroke (width 0) (type default)) (uuid "59c14fd7-8caf-4735-80c4-8e625c29ac5b"))
-(label "SCLK" (at 124.46 99.06 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "305d84f8-96aa-48c4-9cef-cddd3b4ed4de"))
-(wire (pts (xy 121.92 96.52) (xy 124.46 96.52)) (stroke (width 0) (type default)) (uuid "146d79c5-12b5-4bc8-bd1a-51d198e85731"))
-(label "BTN_M" (at 124.46 96.52 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "bf499845-ab1a-401d-8a7e-0bf4ca989ffa"))
-(wire (pts (xy 121.92 93.98) (xy 124.46 93.98)) (stroke (width 0) (type default)) (uuid "d0799997-d197-4745-a4f3-72d0111abc83"))
-(label "SDIO" (at 124.46 93.98 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "8de8a932-3818-4664-a201-24ba9fdb0421"))
-(wire (pts (xy 121.92 91.44) (xy 124.46 91.44)) (stroke (width 0) (type default)) (uuid "e48460c8-3572-43fc-ae9c-97b84c457d62"))
-(symbol (lib_id "power:+3V3") (at 124.46 91.44 270) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "13e60384-747f-47b2-8f80-95780e41ee21") (property "Reference" "#PWR01" (at 127 90.17 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "+3V3" (at 130.86 91.44 270) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 124.46 91.44 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 124.46 91.44 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "a1575180-f094-44b0-93c9-751e18593696")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#PWR01") (unit 1)))))
-(wire (pts (xy 121.92 88.9) (xy 124.46 88.9)) (stroke (width 0) (type default)) (uuid "37de5c09-1f8f-46dd-bf0b-06006ec5f935"))
-(symbol (lib_id "power:GND") (at 124.46 88.9 90) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "86341187-3bad-4245-982e-b5c67a22913c") (property "Reference" "#PWR02" (at 127 87.63 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 130.86 88.9 90) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 124.46 88.9 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 124.46 88.9 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "3f2b3ac6-d25f-41d5-bf63-eeac78c9200d")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#PWR02") (unit 1)))))
-(no_connect (at 121.92 86.36) (uuid "59257530-93ff-4e9c-9c4b-2e2d1ab05b7c"))
-(symbol (lib_id "Connector_Generic:Conn_01x06") (at 215.9 71.12 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "8ff42cb2-6d9d-4190-bffb-47f0cb4b4c4a") (property "Reference" "J1" (at 218.44 69.85 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "FH12-6S-0.5SH" (at 218.44 72.39 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "Connector_FFC-FPC:Hirose_FH12-6S-0.5SH_1x06-1MP_P0.50mm_Horizontal" (at 215.9 71.12 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 215.9 71.12 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "75bb286d-8204-48c0-8afe-7d899a477fba"))(pin "2" (uuid "6fb95ab1-1e8c-466e-8819-47577c87a59c"))(pin "3" (uuid "91ab3a03-2a61-4cee-b73f-be968011d42a"))(pin "4" (uuid "2a6236e0-bfcb-4fc5-b91b-57920868db07"))(pin "5" (uuid "2c81f2fc-a562-4238-81ca-e9b789e9d191"))(pin "6" (uuid "a932c9b8-c513-4400-9cc0-3b14bbe2e468")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "J1") (unit 1)))))
-(wire (pts (xy 210.82 66.04) (xy 208.28 66.04)) (stroke (width 0) (type default)) (uuid "e425cbdc-d8c5-433c-9589-d4e4e72ea0f4"))
-(symbol (lib_id "power:+3V3") (at 208.28 66.04 90) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "59872b64-aabb-416b-9180-4f838ba53f8b") (property "Reference" "#PWR03" (at 210.82 64.77 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "+3V3" (at 201.88 66.04 90) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 208.28 66.04 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 208.28 66.04 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "aed33b96-77af-49fe-aaf8-97314e95e54a")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#PWR03") (unit 1)))))
-(wire (pts (xy 210.82 68.58) (xy 208.28 68.58)) (stroke (width 0) (type default)) (uuid "0d4e77c3-f829-42db-baa1-906f75c547cb"))
-(symbol (lib_id "power:GND") (at 208.28 68.58 270) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "bf970f35-2aec-4a42-9d9b-2c5233f65894") (property "Reference" "#PWR04" (at 210.82 67.31 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 201.88 68.58 270) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 208.28 68.58 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 208.28 68.58 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "5b278b46-ccd5-4f5b-9f3d-f807de772269")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#PWR04") (unit 1)))))
-(wire (pts (xy 210.82 71.12) (xy 208.28 71.12)) (stroke (width 0) (type default)) (uuid "e558b00e-4110-49fa-aca4-53818f202162"))
-(label "SCLK" (at 208.28 71.12 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "3d394865-8342-495a-b4ad-7b76627ac0d1"))
-(wire (pts (xy 210.82 73.66) (xy 208.28 73.66)) (stroke (width 0) (type default)) (uuid "45045ac0-2e85-4ffa-8399-58c964f56e0a"))
-(label "SDIO" (at 208.28 73.66 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "bafa93a7-3a28-4c32-85ef-aeac7d845f3e"))
-(wire (pts (xy 210.82 76.2) (xy 208.28 76.2)) (stroke (width 0) (type default)) (uuid "263b8493-ca3e-4915-b1e7-670554faf567"))
-(label "NCS_R" (at 208.28 76.2 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "19bef481-3749-40c2-b7de-2bff8dab1cf0"))
-(wire (pts (xy 210.82 78.74) (xy 208.28 78.74)) (stroke (width 0) (type default)) (uuid "5518ba92-0d20-4fc8-a505-1a862a484c76"))
-(label "MOTION_R" (at 208.28 78.74 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "7a88fe7b-039f-4f6e-959f-630102187fe1"))
-(symbol (lib_id "Connector_Generic:Conn_01x06") (at 215.9 114.3 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "f167c2e6-be57-48ec-89b3-78552bbf685d") (property "Reference" "J2" (at 218.44 113.03 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "FH12-6S-0.5SH" (at 218.44 115.57 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "Connector_FFC-FPC:Hirose_FH12-6S-0.5SH_1x06-1MP_P0.50mm_Horizontal" (at 215.9 114.3 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 215.9 114.3 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "28e2e11d-8e00-414d-b9bd-0ef093fe6619"))(pin "2" (uuid "99859c39-535d-4805-867b-a46ebfe66c9b"))(pin "3" (uuid "af1b5da3-3480-46ff-93eb-39ced2e93ad1"))(pin "4" (uuid "d3fb00f7-c4c9-4bf4-b9bf-8f684f1aa570"))(pin "5" (uuid "f1fe29af-cb3f-4803-8e5f-c6b45fddab41"))(pin "6" (uuid "6b89717e-22d1-4d08-bc3c-b39ff30dfd3c")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "J2") (unit 1)))))
-(wire (pts (xy 210.82 109.22) (xy 208.28 109.22)) (stroke (width 0) (type default)) (uuid "db470192-14f0-4365-ab3a-2dedf6245d98"))
-(symbol (lib_id "power:+3V3") (at 208.28 109.22 90) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "e06754c0-22f1-435d-ba2e-d3e7f6f32ee5") (property "Reference" "#PWR05" (at 210.82 107.95 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "+3V3" (at 201.88 109.22 90) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 208.28 109.22 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 208.28 109.22 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "09bf84ae-3a5f-4383-a75e-a6ad3720439c")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#PWR05") (unit 1)))))
-(wire (pts (xy 210.82 111.76) (xy 208.28 111.76)) (stroke (width 0) (type default)) (uuid "6ce3e1fe-fee5-4957-8777-aff30d2af910"))
-(symbol (lib_id "power:GND") (at 208.28 111.76 270) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "1ffe755b-d69e-422a-9f7d-6a92ac840942") (property "Reference" "#PWR06" (at 210.82 110.49 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 201.88 111.76 270) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 208.28 111.76 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 208.28 111.76 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "34f238f9-c40b-488f-a735-dfe37ea9fd8b")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#PWR06") (unit 1)))))
-(wire (pts (xy 210.82 114.3) (xy 208.28 114.3)) (stroke (width 0) (type default)) (uuid "0fa257fc-28f6-40cf-9d65-4f82e8c347d4"))
-(label "SCLK" (at 208.28 114.3 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "a168561a-1e16-4969-aeb3-b71d8f1daae4"))
-(wire (pts (xy 210.82 116.84) (xy 208.28 116.84)) (stroke (width 0) (type default)) (uuid "88ecc0e8-5d8e-45c5-8d9d-0b6a55073a83"))
-(label "SDIO" (at 208.28 116.84 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "821805e8-cb4b-4916-bc32-e3f0bff17d17"))
-(wire (pts (xy 210.82 119.38) (xy 208.28 119.38)) (stroke (width 0) (type default)) (uuid "eb575e7d-e06e-46f2-a38b-262932053e27"))
-(label "NCS_L" (at 208.28 119.38 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "0016a620-b73f-49a6-a47f-05b5e13f3ae0"))
-(wire (pts (xy 210.82 121.92) (xy 208.28 121.92)) (stroke (width 0) (type default)) (uuid "ce5df561-9780-490a-b987-240c61a11bbf"))
-(label "MOTION_L" (at 208.28 121.92 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "f9e4cb74-24bb-4d51-882d-83e90028cf15"))
-(symbol (lib_id "Connector:TestPoint") (at 60.96 144.78 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "10f19708-0c7b-46e8-993e-8f7d23956e1e") (property "Reference" "TP1" (at 63.5 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "BTN_L" (at 63.5 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm" (at 60.96 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 60.96 144.78 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "458eb298-912d-4ee3-b504-f04d2f4fe1cf")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "TP1") (unit 1)))))
-(wire (pts (xy 60.96 144.78) (xy 60.96 147.32)) (stroke (width 0) (type default)) (uuid "ec61fd7d-7a9d-4c5d-8393-eb854b981a25"))
-(label "BTN_L" (at 60.96 147.32 270) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "8a46e72d-821d-45e5-9293-9d6e806936bc"))
-(symbol (lib_id "Connector:TestPoint") (at 78.74 144.78 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "1e93da89-13d0-4cb6-a742-55f7f6dab1cd") (property "Reference" "TP2" (at 81.28 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "BTN_M" (at 81.28 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm" (at 78.74 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 78.74 144.78 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "603b3cbc-af22-4027-ab4c-73f90f5cc3dc")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "TP2") (unit 1)))))
-(wire (pts (xy 78.74 144.78) (xy 78.74 147.32)) (stroke (width 0) (type default)) (uuid "554a84f8-501b-4865-a534-5c383a8d34f0"))
-(label "BTN_M" (at 78.74 147.32 270) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "31f9fe34-9b57-4994-945f-09f6b48747c9"))
-(symbol (lib_id "Connector:TestPoint") (at 99.06 144.78 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "acc36cee-4d36-4933-b88c-537d53d7f44c") (property "Reference" "TP3" (at 101.6 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "BTN_R" (at 101.6 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm" (at 99.06 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 99.06 144.78 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "28292cd5-212f-4958-a46a-4c2839e68ef2")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "TP3") (unit 1)))))
-(wire (pts (xy 99.06 144.78) (xy 99.06 147.32)) (stroke (width 0) (type default)) (uuid "01b5ec98-710e-4f19-9f09-b21a4702316a"))
-(label "BTN_R" (at 99.06 147.32 270) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "ec37ce86-d03a-427f-86ac-efe66f3c4073"))
-(symbol (lib_id "Connector:TestPoint") (at 119.38 144.78 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "591e8f84-0e45-4de3-8ec1-31c6fd01e995") (property "Reference" "TP4" (at 121.92 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "GND" (at 121.92 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm" (at 119.38 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 119.38 144.78 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "2b467636-135c-47b3-a70d-54874ec65e18")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "TP4") (unit 1)))))
-(wire (pts (xy 119.38 144.78) (xy 119.38 147.32)) (stroke (width 0) (type default)) (uuid "0888f8d5-ef90-4c09-9aa6-33ea4580e89a"))
-(symbol (lib_id "power:GND") (at 119.38 147.32 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "147541ed-1480-43ff-80aa-6d2da33a26ae") (property "Reference" "#PWR07" (at 121.92 146.05 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 119.38 151.92 0) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 119.38 147.32 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 119.38 147.32 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "777ff567-28d3-4bca-a8ab-b64f8a7b4d7a")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#PWR07") (unit 1)))))
-(symbol (lib_id "power:PWR_FLAG") (at 40.64 30.48 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "4e640cb3-8991-4ddf-9297-0c3df5343a89") (property "Reference" "#FLG08" (at 43.18 29.21 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "PWR_FLAG" (at 43.18 31.75 0) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 40.64 30.48 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 40.64 30.48 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "ce1c1355-279d-46b9-9be2-55b1deb4a59c")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#FLG08") (unit 1)))))
-(wire (pts (xy 40.64 30.48) (xy 40.64 33.02)) (stroke (width 0) (type default)) (uuid "adfd821c-5771-4772-8800-a3f0ea3d081c"))
-(symbol (lib_id "power:GND") (at 40.64 33.02 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "71a82a84-638c-4e9a-828b-fd12a0ca5db5") (property "Reference" "#PWR09" (at 43.18 31.75 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 40.64 37.62 0) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 40.64 33.02 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 40.64 33.02 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "4bfde0f9-14bb-4fee-8d51-c09930592d5b")) (instances (project "rollino-base" (path "/22570663-a3bb-4856-b471-6ccb7bbef654" (reference "#PWR09") (unit 1)))))
-(text "XIAO pins as in zmk/boards/shields/rollino/rollino.overlay; NCS/MOTION _R = right sensor (J1), _L = left (J2)" (exclude_from_sim no) (at 25 175 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "ecdacb16-c24f-428b-a39f-1f5d5d038e90"))
-(text "J1/J2 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - same pinout as the sensor board's J1" (exclude_from_sim no) (at 25 181 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "cb7c9943-98ea-4e86-be2f-77b88e3139fc"))
-(text "SDIO goes to both SPI MOSI (D10) and MISO: the firmware puts them on the same pin" (exclude_from_sim no) (at 25 187 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "6a64ef49-18ab-4cd4-baea-32c235ea3d70"))
+(symbol (lib_id "rollino:XIAO_nRF52840") (at 109.22 93.98 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "399c27bb-3f19-4c6a-9420-6c7248146dfa") (property "Reference" "U1" (at 109.22 82.55 0) (effects (font (size 1.27 1.27))))(property "Value" "XIAO nRF52840" (at 109.22 105.41 0) (effects (font (size 1.27 1.27))))(property "Footprint" "rollino:XIAO_nRF52840_upside_down" (at 109.22 93.98 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 109.22 93.98 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "7c096dd7-676f-4af5-a144-d455e91d71aa"))(pin "2" (uuid "1e4a282a-6b0e-4fb6-9b74-2a0c92ed55f8"))(pin "3" (uuid "8534d29f-24bc-4d63-adbf-20fc4642e3ed"))(pin "4" (uuid "0eef83b9-560d-48fd-9ce7-d0b3e8f0b29e"))(pin "5" (uuid "e0f111b5-7c39-419e-9238-7dc182cb8ee1"))(pin "6" (uuid "39c33eab-d5ba-4ea1-bf66-0e61c11ea044"))(pin "7" (uuid "73217fb7-f24e-4c50-bbc7-470acca9f0c9"))(pin "8" (uuid "3ca9f1d2-de4a-4f7c-9843-b420dd0f0e5f"))(pin "9" (uuid "ef2eddbb-50d1-4f03-891d-93e06cf117dd"))(pin "10" (uuid "693641fe-bbfe-4a79-884e-af11fda2319e"))(pin "11" (uuid "986a81f5-a468-456d-828a-c752d0ef13a0"))(pin "12" (uuid "7aa93d28-0ddd-487d-98cb-6e1444491658"))(pin "13" (uuid "b244c856-7774-493f-95d2-680e3c852a38"))(pin "14" (uuid "f460b40c-fd96-467a-a2cc-9057fb1edd3e")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "U1") (unit 1)))))
+(wire (pts (xy 96.52 86.36) (xy 93.98 86.36)) (stroke (width 0) (type default)) (uuid "e6653f24-eff7-4d8a-9a25-1c22dceb20f9"))
+(label "BTN_L" (at 93.98 86.36 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "36e283eb-1895-432a-8718-f7ec9b818f85"))
+(wire (pts (xy 96.52 88.9) (xy 93.98 88.9)) (stroke (width 0) (type default)) (uuid "c964fd4c-83b5-4fda-96b8-0ad0b04c3cb0"))
+(label "BTN_R" (at 93.98 88.9 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "7aae3386-6289-424a-8f9a-d9132f6dc621"))
+(wire (pts (xy 96.52 91.44) (xy 93.98 91.44)) (stroke (width 0) (type default)) (uuid "40228985-e034-48d1-9a7d-41ee78330334"))
+(label "MOTION_L" (at 93.98 91.44 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "08283052-02c5-4396-904d-0df2cf2597c8"))
+(wire (pts (xy 96.52 93.98) (xy 93.98 93.98)) (stroke (width 0) (type default)) (uuid "1fa73c13-5e94-458d-ba78-80d99240a85b"))
+(label "MOTION_R" (at 93.98 93.98 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "19dbc097-4c87-4054-aacf-9a216b477e39"))
+(no_connect (at 96.52 96.52) (uuid "8ccbc826-eb8d-48ba-a4ed-047bc4bc5619"))
+(no_connect (at 96.52 99.06) (uuid "c289128f-3323-4b6c-8dd6-36c8b3fd89fc"))
+(wire (pts (xy 96.52 101.6) (xy 93.98 101.6)) (stroke (width 0) (type default)) (uuid "bf390729-519e-44f7-bee0-323768a56093"))
+(label "NCS_L" (at 93.98 101.6 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "a6cb8436-89fc-4057-90f6-a6bc712e9a71"))
+(wire (pts (xy 121.92 101.6) (xy 124.46 101.6)) (stroke (width 0) (type default)) (uuid "da5a1aba-a6a8-49e7-b552-e430788aba23"))
+(label "NCS_R" (at 124.46 101.6 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "18d97965-4aea-426b-811b-a2bca5d085be"))
+(wire (pts (xy 121.92 99.06) (xy 124.46 99.06)) (stroke (width 0) (type default)) (uuid "5a7c50c9-bb0f-41b3-8e40-4d8a74c60b6f"))
+(label "SCLK" (at 124.46 99.06 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "92a3b856-d7b6-4765-b76e-55b3003e9e81"))
+(wire (pts (xy 121.92 96.52) (xy 124.46 96.52)) (stroke (width 0) (type default)) (uuid "0a6315d5-c6d5-439c-874f-ce0a42b97235"))
+(label "BTN_M" (at 124.46 96.52 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "12be81e8-69fd-49de-b07b-d35aa034bd88"))
+(wire (pts (xy 121.92 93.98) (xy 124.46 93.98)) (stroke (width 0) (type default)) (uuid "ab9b9df2-e9ae-4d23-9699-003d4c222bff"))
+(label "SDIO" (at 124.46 93.98 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "30c35de4-183d-4832-b2e4-66a02306fa29"))
+(wire (pts (xy 121.92 91.44) (xy 124.46 91.44)) (stroke (width 0) (type default)) (uuid "1f294913-ed05-496b-bbcd-2b4580556037"))
+(symbol (lib_id "power:+3V3") (at 124.46 91.44 270) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "2e248334-cfcc-4f24-afe8-c499d881c7f0") (property "Reference" "#PWR01" (at 127 90.17 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "+3V3" (at 130.86 91.44 270) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 124.46 91.44 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 124.46 91.44 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "d4339489-bf0f-4695-8ddc-bab497206799")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR01") (unit 1)))))
+(wire (pts (xy 121.92 88.9) (xy 124.46 88.9)) (stroke (width 0) (type default)) (uuid "d1cc4cee-e1d6-488d-a4ed-ad3d84f97586"))
+(symbol (lib_id "power:GND") (at 124.46 88.9 90) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "3eba0355-696e-47e7-a469-79dab3eb7163") (property "Reference" "#PWR02" (at 127 87.63 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 130.86 88.9 90) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 124.46 88.9 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 124.46 88.9 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "c8dbb4dd-e77a-4be8-9aee-363151664ebb")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR02") (unit 1)))))
+(no_connect (at 121.92 86.36) (uuid "2cd47e29-8295-465a-beed-21fb6af2d5b3"))
+(symbol (lib_id "Connector_Generic_MountingPin:Conn_01x06_MountingPin") (at 215.9 71.12 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "e1029977-2d1b-4b08-9e72-dfc87f1e9523") (property "Reference" "J1" (at 218.44 69.85 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "FH12-6S-0.5SH" (at 218.44 72.39 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "Connector_FFC-FPC:Hirose_FH12-6S-0.5SH_1x06-1MP_P0.50mm_Horizontal" (at 215.9 71.12 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 215.9 71.12 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "8601a73b-61bc-43a1-be47-794cefb174eb"))(pin "2" (uuid "f561385e-9624-47ed-91f5-507d99f3b7d8"))(pin "3" (uuid "b6e2021c-d42b-4fad-a96f-9937c9e6f436"))(pin "4" (uuid "fb24e809-745a-4b30-bb32-e058f2d8229d"))(pin "5" (uuid "5eb21955-bb83-445a-b4d3-a4627e99c9f3"))(pin "6" (uuid "f62a188b-fe39-4dd2-a1db-b17681d6f4f7"))(pin "MP" (uuid "91ff0fa5-da3b-4800-a0a1-bf0e777c0d41")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "J1") (unit 1)))))
+(wire (pts (xy 210.82 66.04) (xy 208.28 66.04)) (stroke (width 0) (type default)) (uuid "b96fce8a-5618-4c77-bbd8-a7dff1693c1e"))
+(symbol (lib_id "power:+3V3") (at 208.28 66.04 90) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "c40b4d3b-c4a0-497e-984e-b1fccc5b1cb2") (property "Reference" "#PWR03" (at 210.82 64.77 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "+3V3" (at 201.88 66.04 90) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 208.28 66.04 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 208.28 66.04 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "a6b2378c-6f95-4482-a829-ca55818b1c70")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR03") (unit 1)))))
+(wire (pts (xy 210.82 68.58) (xy 208.28 68.58)) (stroke (width 0) (type default)) (uuid "39f69728-9cd3-427a-8a5c-621723672e95"))
+(symbol (lib_id "power:GND") (at 208.28 68.58 270) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "4cfcc057-432b-42f4-bdfc-afa60bb2c59d") (property "Reference" "#PWR04" (at 210.82 67.31 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 201.88 68.58 270) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 208.28 68.58 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 208.28 68.58 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "372bdcb5-f3bc-4304-a660-422856ac9b34")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR04") (unit 1)))))
+(wire (pts (xy 210.82 71.12) (xy 208.28 71.12)) (stroke (width 0) (type default)) (uuid "aa3970e0-7f40-4077-be53-bd4f9a051a2e"))
+(label "SCLK" (at 208.28 71.12 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "933001da-5782-4fb5-8c4c-3a9761c24833"))
+(wire (pts (xy 210.82 73.66) (xy 208.28 73.66)) (stroke (width 0) (type default)) (uuid "b3dacd3b-d1f7-481f-867d-11e48f282f73"))
+(label "SDIO" (at 208.28 73.66 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "940300dd-60f5-4dfc-b4ad-a806d6dea7e8"))
+(wire (pts (xy 210.82 76.2) (xy 208.28 76.2)) (stroke (width 0) (type default)) (uuid "996cc2f3-8c4c-4c79-912d-28aec754b225"))
+(label "NCS_R" (at 208.28 76.2 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "4630a3d0-61d1-4f47-bc78-d4e6b3b916c0"))
+(wire (pts (xy 210.82 78.74) (xy 208.28 78.74)) (stroke (width 0) (type default)) (uuid "718b2b07-31c3-4616-adf8-da76c3f0effb"))
+(label "MOTION_R" (at 208.28 78.74 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "c87db879-de8f-421b-958f-c327e8cd13b3"))
+(wire (pts (xy 215.9 83.82) (xy 215.9 86.36)) (stroke (width 0) (type default)) (uuid "9a66897f-35a6-49bd-be48-fd07125bb387"))
+(symbol (lib_id "power:GND") (at 215.9 86.36 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "14a41351-71ed-4b80-bfd6-4f632733f656") (property "Reference" "#PWR05" (at 218.44 85.09 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 215.9 90.96 0) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 215.9 86.36 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 215.9 86.36 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "cb060e81-db6e-4a7f-b899-4b1f8d670b71")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR05") (unit 1)))))
+(symbol (lib_id "Connector_Generic_MountingPin:Conn_01x06_MountingPin") (at 215.9 114.3 0) (unit 1) (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no) (uuid "d9bbf960-0227-49c0-ac1c-86a8d542da6e") (property "Reference" "J2" (at 218.44 113.03 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "FH12-6S-0.5SH" (at 218.44 115.57 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "Connector_FFC-FPC:Hirose_FH12-6S-0.5SH_1x06-1MP_P0.50mm_Horizontal" (at 215.9 114.3 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 215.9 114.3 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "c4ab7387-9e12-47a1-b0b5-b5e4892ea2cd"))(pin "2" (uuid "d52f45c8-0a72-4335-91d4-858fc11aa01e"))(pin "3" (uuid "32e7eb43-dfc2-459a-a9c8-4f7c7b437bc7"))(pin "4" (uuid "a5a66cef-c03e-4eb0-a1e9-b2b91f195d90"))(pin "5" (uuid "3367c5c6-bff5-4cb1-b50b-23722fd3a9d9"))(pin "6" (uuid "73b5bf59-5622-4c68-9360-bcf9bb36d928"))(pin "MP" (uuid "4519fff6-4536-4f24-b4b6-500571c5fa36")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "J2") (unit 1)))))
+(wire (pts (xy 210.82 109.22) (xy 208.28 109.22)) (stroke (width 0) (type default)) (uuid "add653b5-301f-4731-ba11-196e56d2bf79"))
+(symbol (lib_id "power:+3V3") (at 208.28 109.22 90) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "912d8793-ae2a-4554-8e94-a0e78a3e76f6") (property "Reference" "#PWR06" (at 210.82 107.95 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "+3V3" (at 201.88 109.22 90) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 208.28 109.22 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 208.28 109.22 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "141fdc55-5789-4f8b-8da6-d30d40cfb0f0")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR06") (unit 1)))))
+(wire (pts (xy 210.82 111.76) (xy 208.28 111.76)) (stroke (width 0) (type default)) (uuid "6a0f1a3c-c5ba-453c-8f02-c897fb3652de"))
+(symbol (lib_id "power:GND") (at 208.28 111.76 270) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "52194806-e974-4771-9dec-4d29579dca36") (property "Reference" "#PWR07" (at 210.82 110.49 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 201.88 111.76 270) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 208.28 111.76 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 208.28 111.76 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "b24ea3f8-2f74-41ae-bf43-9b4a7914c02d")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR07") (unit 1)))))
+(wire (pts (xy 210.82 114.3) (xy 208.28 114.3)) (stroke (width 0) (type default)) (uuid "a0021a37-5b4c-4a10-b83e-41383b9032be"))
+(label "SCLK" (at 208.28 114.3 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "47ba984a-90a3-4916-9437-0da7a85f2946"))
+(wire (pts (xy 210.82 116.84) (xy 208.28 116.84)) (stroke (width 0) (type default)) (uuid "bc0e1d2e-ed5d-4873-bb89-3a415812d58a"))
+(label "SDIO" (at 208.28 116.84 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "31954f13-ad92-48c9-a5a9-a998543927c1"))
+(wire (pts (xy 210.82 119.38) (xy 208.28 119.38)) (stroke (width 0) (type default)) (uuid "73115bc2-bd2d-4da4-92ba-8c2f0f5ba425"))
+(label "NCS_L" (at 208.28 119.38 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "5ae4e69f-9360-4f24-aaf0-061486410d12"))
+(wire (pts (xy 210.82 121.92) (xy 208.28 121.92)) (stroke (width 0) (type default)) (uuid "cb739ca7-c1bf-44cd-97d6-983d4b1ed749"))
+(label "MOTION_L" (at 208.28 121.92 180) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "cfe2be02-4156-487c-bdd9-de1b72959174"))
+(wire (pts (xy 215.9 127) (xy 215.9 129.54)) (stroke (width 0) (type default)) (uuid "60dead8c-706e-4e99-ae6c-e1644ffe4bb2"))
+(symbol (lib_id "power:GND") (at 215.9 129.54 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "a8aa8977-376c-424c-bc10-fb0e4d4b4743") (property "Reference" "#PWR08" (at 218.44 128.27 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 215.9 134.14 0) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 215.9 129.54 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 215.9 129.54 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "e7f661b8-fefd-41bc-b693-eda8a236e0c7")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR08") (unit 1)))))
+(symbol (lib_id "Connector:TestPoint") (at 60.96 144.78 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "079e3415-886e-4573-a8ba-c7ea1a0f0af2") (property "Reference" "TP1" (at 63.5 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "BTN_L" (at 63.5 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm" (at 60.96 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 60.96 144.78 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "611dd42e-0f3a-4ce3-bd1e-913d5bb13081")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "TP1") (unit 1)))))
+(wire (pts (xy 60.96 144.78) (xy 60.96 147.32)) (stroke (width 0) (type default)) (uuid "02e8af07-699b-4bca-a32f-c5d2582e743c"))
+(label "BTN_L" (at 60.96 147.32 270) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "42d476cb-1067-4b5d-99ca-f6ae2f88f767"))
+(symbol (lib_id "Connector:TestPoint") (at 78.74 144.78 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "aa9c7f57-1b1f-4f41-a8ed-6a10c358570d") (property "Reference" "TP2" (at 81.28 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "BTN_M" (at 81.28 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm" (at 78.74 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 78.74 144.78 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "3453bcd3-e0c4-4b5e-bafc-ed7495d22182")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "TP2") (unit 1)))))
+(wire (pts (xy 78.74 144.78) (xy 78.74 147.32)) (stroke (width 0) (type default)) (uuid "9f0225ae-a27c-4a2e-8da6-01aefc06b53b"))
+(label "BTN_M" (at 78.74 147.32 270) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "1e58554b-dd4b-4704-a6d4-f81b15b71da3"))
+(symbol (lib_id "Connector:TestPoint") (at 99.06 144.78 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "cf2e838c-5c3f-4db9-90a5-ea08e8cd58b7") (property "Reference" "TP3" (at 101.6 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "BTN_R" (at 101.6 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm" (at 99.06 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 99.06 144.78 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "a3428ab8-f7ea-4280-92db-6ae1a9a5dc83")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "TP3") (unit 1)))))
+(wire (pts (xy 99.06 144.78) (xy 99.06 147.32)) (stroke (width 0) (type default)) (uuid "4f230e9b-d12f-4d70-b890-b36a332ef8f2"))
+(label "BTN_R" (at 99.06 147.32 270) (effects (font (size 1.27 1.27)) (justify right bottom)) (uuid "df7511a6-b558-4a72-910f-52dda70a7ff2"))
+(symbol (lib_id "Connector:TestPoint") (at 119.38 144.78 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "72245c26-4998-4e7a-b5d2-9eb0a3b54bc8") (property "Reference" "TP4" (at 121.92 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "GND" (at 121.92 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "TestPoint:TestPoint_Pad_D1.5mm" (at 119.38 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 119.38 144.78 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "f5e4bf8b-f6a3-4b67-acf9-cdff7714dd98")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "TP4") (unit 1)))))
+(wire (pts (xy 119.38 144.78) (xy 119.38 147.32)) (stroke (width 0) (type default)) (uuid "33a48cd8-f3d1-4c5c-b830-2af2e37d9d49"))
+(symbol (lib_id "power:GND") (at 119.38 147.32 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "df7208b9-9fed-4945-a9d7-580a02a029ed") (property "Reference" "#PWR09" (at 121.92 146.05 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 119.38 151.92 0) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 119.38 147.32 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 119.38 147.32 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "0df687ef-2e14-476f-9116-a07b2c9ae21d")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR09") (unit 1)))))
+(symbol (lib_id "Mechanical:MountingHole") (at 149.86 144.78 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "70e9acac-3937-4216-932f-38b2a41c57cb") (property "Reference" "H1" (at 152.4 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "M2" (at 152.4 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "MountingHole:MountingHole_2.2mm_M2" (at 149.86 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 149.86 144.78 0) (effects (font (size 1.27 1.27)) hide))  (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "H1") (unit 1)))))
+(symbol (lib_id "Mechanical:MountingHole") (at 165.1 144.78 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "13fe1644-9ece-4857-904f-ef09f20435e5") (property "Reference" "H2" (at 167.64 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "M2" (at 167.64 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "MountingHole:MountingHole_2.2mm_M2" (at 165.1 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 165.1 144.78 0) (effects (font (size 1.27 1.27)) hide))  (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "H2") (unit 1)))))
+(symbol (lib_id "Mechanical:MountingHole") (at 180.34 144.78 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "3bed6d8e-9909-4e28-8989-be7ee9f9df7f") (property "Reference" "H3" (at 182.88 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "M2" (at 182.88 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "MountingHole:MountingHole_2.2mm_M2" (at 180.34 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 180.34 144.78 0) (effects (font (size 1.27 1.27)) hide))  (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "H3") (unit 1)))))
+(symbol (lib_id "Mechanical:MountingHole") (at 195.58 144.78 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board yes) (dnp no) (uuid "40194d0e-0c42-4876-9f8e-23c296dce7ed") (property "Reference" "H4" (at 198.12 143.51 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Value" "M2" (at 198.12 146.05 0) (effects (font (size 1.27 1.27)) (justify left)))(property "Footprint" "MountingHole:MountingHole_2.2mm_M2" (at 195.58 144.78 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 195.58 144.78 0) (effects (font (size 1.27 1.27)) hide))  (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "H4") (unit 1)))))
+(symbol (lib_id "power:PWR_FLAG") (at 40.64 30.48 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "6838b609-d8cf-40a4-b9a4-e1995de86682") (property "Reference" "#FLG10" (at 43.18 29.21 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "PWR_FLAG" (at 43.18 31.75 0) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 40.64 30.48 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 40.64 30.48 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "9f25a0a2-f117-4202-8f51-c150d0963c88")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#FLG10") (unit 1)))))
+(wire (pts (xy 40.64 30.48) (xy 40.64 33.02)) (stroke (width 0) (type default)) (uuid "3d189f62-23aa-491e-915d-75002498faee"))
+(symbol (lib_id "power:GND") (at 40.64 33.02 0) (unit 1) (exclude_from_sim no) (in_bom no) (on_board no) (dnp no) (uuid "b2c583b7-8d05-4a6d-9971-9cd90a654acb") (property "Reference" "#PWR11" (at 43.18 31.75 0) (effects (font (size 1.27 1.27)) (justify left) hide))(property "Value" "GND" (at 40.64 37.62 0) (effects (font (size 1.27 1.27))))(property "Footprint" "" (at 40.64 33.02 0) (effects (font (size 1.27 1.27)) hide))(property "Datasheet" "~" (at 40.64 33.02 0) (effects (font (size 1.27 1.27)) hide)) (pin "1" (uuid "2bc08be2-610d-4cd6-b076-dbc3336b041e")) (instances (project "rollino-base" (path "/39a95762-bb94-4e09-a8fe-da8fa99d7ee5" (reference "#PWR11") (unit 1)))))
+(text "XIAO pins as in zmk/boards/shields/rollino/rollino.overlay; NCS/MOTION _R = right sensor (J1), _L = left (J2)" (exclude_from_sim no) (at 25 175 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "e8b82f1c-dbd9-4730-a0d5-96e969302adf"))
+(text "J1/J2 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - same pinout as the sensor board's J1" (exclude_from_sim no) (at 25 181 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "8bbc978b-b253-4619-a3ce-576c3b813572"))
+(text "SDIO goes to both SPI MOSI (D10) and MISO: the firmware puts them on the same pin" (exclude_from_sim no) (at 25 187 0) (effects (font (size 1.27 1.27)) (justify left bottom)) (uuid "c15c0b68-98ad-4f76-9bdf-19dd1ac6a976"))
 (sheet_instances (path "/" (page "1")))
 )

@@ -195,6 +195,63 @@ def write_symbol_library():
     return {"rollino:" + s.split('"')[1]: s for s in syms}
 
 
+# ---------------------------------------------------------------- 3D models
+
+MODELS = os.path.join(LIB, "rollino.3dshapes")
+MODEL_REF = "${KIPRJMOD}/../lib/rollino.3dshapes/%s.wrl"
+
+
+def wrl_shape(points, faces, color, transparency=0.0):
+    """A VRML shape; points in footprint mm (y down), written in KiCad's
+    model units (0.1 in, y up)."""
+    pts = ",\n".join("%.4f %.4f %.4f" % (x / 2.54, -y / 2.54, z / 2.54) for x, y, z in points)
+    idx = ",\n".join(", ".join(str(i) for i in f) + ", -1" for f in faces)
+    return ('Shape { appearance Appearance { material Material { diffuseColor %g %g %g specularColor 0.2 0.2 0.2 '
+            'shininess 0.3 transparency %g } }\n geometry IndexedFaceSet { creaseAngle 0.5 coord Coordinate { point [\n%s\n] }\n'
+            ' coordIndex [\n%s\n] } }\n' % (color + (transparency, pts, idx)))
+
+
+def box(x0, x1, y0, y1, z0, z1):
+    pts = [(x, y, z) for z in (z0, z1) for y in (y0, y1) for x in (x0, x1)]
+    faces = [(0, 2, 3, 1), (4, 5, 7, 6), (0, 1, 5, 4), (2, 6, 7, 3), (0, 4, 6, 2), (1, 3, 7, 5)]
+    return pts, faces
+
+
+def write_models():
+    os.makedirs(MODELS, exist_ok=True)
+    # PMW3610: the package on the board's top, the LM18-LSI lens under it
+    # (roughly, as the case's pocket for it: 20 x 17, centred on the package)
+    body = wrl_shape(*box(-8.5, 7.7, -5.45, 5.45, 0, 3.0), (0.02, 0.02, 0.02))
+    lens = wrl_shape(*box(-0.4 - 10, -0.4 + 10, -8.5, 8.5, -1.6 - 4.0, -1.6), (0.7, 0.85, 0.95), 0.35)
+    open(os.path.join(MODELS, "PMW3610DM-SUDU.wrl"), "w").write("#VRML V2.0 utf8\n" + body + lens)
+
+    # XIAO nRF52840 from Seeed's model (../3d/xiao-nrf52840.stl: x from the
+    # USB end's board edge, z up from its underside), turned upside down onto
+    # the footprint: the USB end towards -y, the component side resting on
+    # the board, its parts reaching down through the cutout
+    import struct
+    data = open(os.path.join(PCB, "3d", "xiao-nrf52840.stl"), "rb").read()
+    n = struct.unpack("<I", data[80:84])[0]
+    index, points, faces = {}, [], []
+    for t in range(n):
+        v = struct.unpack("<12f", data[84 + 50 * t:84 + 50 * t + 48])
+        face = []
+        for k in range(3):
+            mx, my, mz = v[3 + 3 * k:6 + 3 * k]
+            p = (round(my, 3), round(mx - 10.475, 3), round(1.0 - mz, 3))
+            if p not in index:
+                index[p] = len(points)
+                points.append(p)
+            face.append(index[p])
+        faces.append(face)
+    open(os.path.join(MODELS, "XIAO_nRF52840_upside_down.wrl"), "w").write(
+        "#VRML V2.0 utf8\n" + wrl_shape(points, faces, (0.25, 0.4, 0.8)))
+
+
+def model_line(name):
+    return '  (model "%s" (offset (xyz 0 0 0)) (scale (xyz 1 1 1)) (rotate (xyz 0 0 0)))\n' % (MODEL_REF % name)
+
+
 # ---------------------------------------------------------------- footprints
 
 def write_footprints():
@@ -208,6 +265,10 @@ def write_footprints():
     text = text.replace('(descr "PMW3610DM-SUDU special 16pin molded lead-frame DIP")',
                         '(descr "PMW3610DM-SUDU 16-pin molded lead-frame DIP, with the LM18-LSI lens cutout; '
                         'optical centre at (2.988, 0). From github.com/badjeff/pmw3610-pcb (CERN-OHL-P-2.0)")')
+    text = re.sub(r'\s*\(model .*?\n\s*\)\s*\)\s*\)', '', text, flags=re.S)
+    text = text.rstrip()
+    assert text.endswith(")")
+    text = text[:-1].rstrip() + "\n" + model_line("PMW3610DM-SUDU") + ")\n"
     open(os.path.join(pretty, "PMW3610DM-SUDU.kicad_mod"), "w").write(text)
 
     # XIAO nRF52840 soldered upside down by its castellated edges: Seeed's
@@ -235,8 +296,8 @@ def write_footprints():
   (fp_line (start -8.9 10.475) (end 8.9 10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
   (fp_circle (center 10.2 -7.545) (end 10.45 -7.545) (stroke (width 0.5) (type solid)) (fill solid) (layer "F.SilkS"))
 %s
-)
-''' % "\n".join(pads)
+%s)
+''' % ("\n".join(pads), model_line("XIAO_nRF52840_upside_down"))
     open(os.path.join(pretty, "XIAO_nRF52840_upside_down.kicad_mod"), "w").write(text)
 
 
@@ -272,7 +333,7 @@ class Schematic:
         return [(n, float(x), float(y), int(a), t) for (t, x, y, a, n) in re.findall(
             r'\(pin (\w+) \w+\s*\(at ([-\d.]+) ([-\d.]+) (\d+)\).*?\(number "([^"]+)"', text, re.S)]
 
-    def symbol(self, ref, lib_id, value, footprint, at, pins, rot=0, text=None, power=False, value_at=None):
+    def symbol(self, ref, lib_id, value, footprint, at, pins, rot=0, text=None, power=False, value_at=None, bom=True):
         lt = self.lib(lib_id, text)
         u = uid()
         # on the 2.54 mm grid, so pins land on the connection grid (power
@@ -305,7 +366,7 @@ class Schematic:
         self.items.append(
             '(symbol (lib_id "%s") (at %g %g %d) (unit 1) (exclude_from_sim no) (in_bom %s) (on_board %s) (dnp no) (uuid "%s") %s %s'
             ' (instances (project "%s" (path "/%s" (reference "%s") (unit 1)))))' % (
-                lib_id, x, y, rot, "no" if power else "yes", "no" if power else "yes", u, props, pin_uuids,
+                lib_id, x, y, rot, "yes" if bom and not power else "no", "no" if power else "yes", u, props, pin_uuids,
                 self.name, self.uuid, ref))
         if not power:
             self.symbols.append((ref, lib_id, value, footprint, u))
@@ -394,6 +455,9 @@ class Board:
         return pcbnew.VECTOR2I(pcbnew.FromMM(self.origin[0] + x), pcbnew.FromMM(self.origin[1] + y))
 
     def net(self, name):
+        # the schematic's labels are local: their nets are "/NAME"
+        if name not in POWER_NETS:
+            name = "/" + name
         if name not in self.nets:
             n = pcbnew.NETINFO_ITEM(self.board, name)
             self.board.Add(n)
@@ -423,19 +487,22 @@ class Board:
         if sym_uuid:
             fp.SetPath(pcbnew.KIID_PATH("/" + sym_uuid))
         for pad in fp.Pads():
-            net = (pins or {}).get(pad.GetNumber())
+            # connectors' mounting tabs go to GND rather than float
+            net = (pins or {}).get(pad.GetNumber(), "GND" if pad.GetNumber() == "MP" else None)
             if net:
                 pad.SetNet(self.net(net))
         self.board.Add(fp)
         return fp
 
-    def text(self, s, at, size=1.0, layer=pcbnew.F_SilkS):
+    def text(self, s, at, size=1.0, layer=pcbnew.F_SilkS, angle=0, thickness=0.15):
         t = pcbnew.PCB_TEXT(self.board)
         t.SetText(s)
         t.SetPosition(self.p(*at))
         t.SetLayer(layer)
         t.SetTextSize(pcbnew.VECTOR2I(pcbnew.FromMM(size), pcbnew.FromMM(size)))
-        t.SetTextThickness(pcbnew.FromMM(size * 0.15))
+        t.SetTextThickness(pcbnew.FromMM(size * thickness))
+        t.SetTextAngleDegrees(angle)
+        t.SetMirrored(layer in (pcbnew.B_Cu, pcbnew.B_Mask, pcbnew.B_SilkS))
         self.board.Add(t)
 
     def save(self, path):
@@ -465,6 +532,8 @@ def write_project(dirname, name):
 FPC_PINS = ["+3V3", "GND", "SCLK", "SDIO", "NCS", "MOTION"]
 FPC_FP = "Connector_FFC-FPC:Hirose_FH12-6S-0.5SH_1x06-1MP_P0.50mm_Horizontal"
 FPC_VALUE = "FH12-6S-0.5SH"
+# with a pin for the connector's mounting tabs, which go to GND
+FPC_SYMBOL = "Connector_Generic_MountingPin:Conn_01x06_MountingPin"
 # the FH12's body runs from its solder tails (local y -2.5) to its mouth (4.35)
 FPC_TAIL, FPC_MOUTH = -2.5, 4.35
 
@@ -493,9 +562,9 @@ def sensor(geo, symlib):
          (-2.988, 0), 0),
         # the case's screw boss is behind the ear (y -7.9 and beyond, x -6.9..-0.9): nothing there
         ("U2", "Regulator_Linear:TPS7A0518PDBV", "TPS7A0518PDBVR", "Package_TO_SOT_SMD:SOT-23-5", (120, 50),
-         {"1": "+3V3", "3": "+3V3", "2": "GND", "4": None, "5": "+1V8"}, (0.8, -8.3), 0),
-        ("J1", "Connector_Generic:Conn_01x06", FPC_VALUE, FPC_FP, (60, 110),
-         {str(i + 1): n for i, n in enumerate(FPC_PINS)}, (s["sc"] - s["pcb_end"] + 0.4 - FPC_TAIL, 0), 90),
+         {"1": "+3V3", "3": "+3V3", "2": "GND", "4": None, "5": "+1V8"}, (0.8, -7.9), 180),
+        ("J1", FPC_SYMBOL, FPC_VALUE, FPC_FP, (60, 110),
+         dict({str(i + 1): n for i, n in enumerate(FPC_PINS)}, MP="GND"), (s["sc"] - s["pcb_end"] + 0.4 - FPC_TAIL, 0), 90),
         ("R1", "Device:R", "10k", R0603, (215, 50), {"1": "+3V3", "2": "NRESET"}, (-8.0, -7.4), 0),
         ("C3", "Device:C", "100nF", C0603, (80, 50), {"1": "+3V3", "2": "GND"}, (-11.0, -7.4), 0),
         # upright on the other side, by the pins they serve
@@ -512,13 +581,13 @@ def sensor(geo, symlib):
         text = symlib.get(lib_id)
         u = sch.symbol(ref, lib_id, value, fp, at, pins, text=text)
         b.footprint(fp, ref, value, bat, brot, pins, u)
-    b.footprint("MountingHole:MountingHole_2.2mm_M2", "H1", "M2", tuple(s["ear"][i] * (1 if i == 0 else -1) for i in range(2)))
+    u = sch.symbol("H1", "Mechanical:MountingHole", "M2", "MountingHole:MountingHole_2.2mm_M2", (230, 50), {}, bom=False)
+    b.footprint("MountingHole:MountingHole_2.2mm_M2", "H1", "M2", (s["ear"][0], -s["ear"][1]), sym_uuid=u)
     sch.flag("+3V3", (40, 30))
     sch.flag("GND", (25, 30))
     sch.text("J1 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - same pinout as J1/J2 on the base board", (25, 160))
     sch.text("Board frame: origin on the optical axis, x down the slope; mounted chip side out, lens towards the ball", (25, 166))
     sch.write(os.path.join(d, name + ".kicad_sch"))
-    b.text("ROLLINO SENSOR", (-8.0, 3.0), 0.8, pcbnew.B_SilkS)
     b.save(os.path.join(d, name + ".kicad_pcb"))
 
 
@@ -550,7 +619,8 @@ def base(geo, symlib):
         side = "R" if foot[0] > 0 else "L"
         ref = "J%d" % (i + 1)
         pins = {str(k + 1): (n + "_" + side if n in ("NCS", "MOTION") else n) for k, n in enumerate(FPC_PINS)}
-        u = sch.symbol(ref, "Connector_Generic:Conn_01x06", FPC_VALUE, FPC_FP, (215, 70 + 45 * i), pins)
+        pins["MP"] = "GND"
+        u = sch.symbol(ref, FPC_SYMBOL, FPC_VALUE, FPC_FP, (215, 70 + 45 * i), pins)
         ux, uy = math.cos(math.radians(ang)), -math.sin(math.radians(ang))  # board direction of the mouth
         mid = (FPC_TAIL + FPC_MOUTH) / 2
         fx, fy = kp(foot)
@@ -560,25 +630,31 @@ def base(geo, symlib):
     # optional buttons (to GND) and a GND pad, on the band near the front
     for i, (net, az) in enumerate([("BTN_L", -35), ("BTN_M", -50), ("BTN_R", 35), ("GND", 50)]):
         ref = "TP%d" % (i + 1)
-        u = sch.symbol(ref, "Connector:TestPoint", net, "TestPoint:TestPoint_Pad_D1.5mm", (60 + 20 * i, 145), {"1": net})
+        u = sch.symbol(ref, "Connector:TestPoint", net, "TestPoint:TestPoint_Pad_D1.5mm", (60 + 20 * i, 145), {"1": net}, bom=False)
         w = (27.5 * math.sin(math.radians(az)), -27.5 * math.cos(math.radians(az)))
         b.footprint("TestPoint:TestPoint_Pad_D1.5mm", ref, net, kp(w), 0, {"1": net}, u)
         b.text(net.replace("BTN_", ""), (kp(w)[0], kp(w)[1] - 2.0), 0.8)
 
     for i, w in enumerate(pos["screws"]):
-        b.footprint("MountingHole:MountingHole_2.2mm_M2", "H%d" % (i + 1), "M2", kp(w))
+        u = sch.symbol("H%d" % (i + 1), "Mechanical:MountingHole", "M2", "MountingHole:MountingHole_2.2mm_M2",
+                       (150 + 15 * i, 145), {}, bom=False)
+        b.footprint("MountingHole:MountingHole_2.2mm_M2", "H%d" % (i + 1), "M2", kp(w), sym_uuid=u)
 
     sch.flag("GND", (40, 30))
     sch.text("XIAO pins as in zmk/boards/shields/rollino/rollino.overlay; NCS/MOTION _R = right sensor (J1), _L = left (J2)", (25, 175))
     sch.text("J1/J2 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - same pinout as the sensor board's J1", (25, 181))
     sch.text("SDIO goes to both SPI MOSI (D10) and MISO: the firmware puts them on the same pin", (25, 187))
     sch.write(os.path.join(d, name + ".kicad_sch"))
-    b.text("ROLLINO", kp((0, -27)), 1.2)
+    # the logo in bare copper on the back of the band's left side, clear of
+    # the screw hole below it; route.py keeps the tracks out of its way
+    for layer in (pcbnew.B_Cu, pcbnew.B_Mask):
+        b.text("ROLLINO", kp((-28.6, 2.6)), 2.2, layer, 90, 0.2)
     b.save(os.path.join(d, name + ".kicad_pcb"))
 
 
 def main():
     geo = case_geometry()
+    write_models()
     write_footprints()
     symlib = write_symbol_library()
     sensor(geo, symlib)
