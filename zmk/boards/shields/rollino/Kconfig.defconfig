@@ -1,0 +1,6 @@
+if SHIELD_ROLLINO
+
+config ZMK_KEYBOARD_NAME
+    default "Rollino"
+
+endif

@@ -22,3 +22,37 @@ it, held by the same screws.
 - `case/renders/` - preview renders.
 - `datasheets/` - component datasheets. The PMW3610 datasheet is available
   [here](https://www.epsglobal.com/Media-Library/EPSGlobal/Products/files/pixart/PMW3610DM-SUDU.pdf?ext=.pdf).
+
+Firmware
+--------
+
+ZMK, built by GitHub Actions on every push (download `firmware.zip` from the
+run, then double-tap the XIAO's reset and copy the `.uf2` onto it). It's a
+standalone Bluetooth/USB mouse.
+
+- `zmk/boards/shields/rollino/` - the shield: pins, the two PMW3610 sensors
+  (Zephyr's driver), three optional buttons.
+- `zmk/src/ball_fusion.c` - combines the two sensors: each one only sees the
+  ball's surface sliding past in its own tilted plane; together they give the
+  ball's whole rotation. Rolling moves the pointer (as if the finger on top
+  dragged it), twisting about the vertical axis scrolls.
+- `config/rollino.keymap` - the buttons: left, right, middle click.
+
+| XIAO pin | Use |
+|----------|-----|
+| D8 | SCLK, both sensors |
+| D10 | SDIO, both sensors (SPI MOSI and MISO on the same pin) |
+| D7 | NCS, right sensor |
+| D6 | NCS, left sensor |
+| D3 | MOTION, right sensor |
+| D2 | MOTION, left sensor |
+| D0, D1, D9 | optional buttons to GND: left, right, middle click |
+| D4, D5 | free |
+
+**Calibrating the sensors' orientation.** The fusion needs to know which way
+each sensor's X axis points (`rotation` in the shield's `ball_fusion` node,
+plus the sensor's `invert-x` / `invert-y`), which depends on how the chip
+sits on the sensor PCB. Roll the ball right: the pointer should go right;
+towards you: down; twist it: scroll, with no drift. If one direction is off,
+try one sensor at a time (cover the other's lens) and fix its rotation /
+inversion until rolling right moves the pointer mostly right.

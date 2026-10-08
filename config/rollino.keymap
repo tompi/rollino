@@ -1,0 +1,14 @@
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/pointing.h>
+
+/* Three optional buttons (see the shield's kscan); without them fitted the
+ * ball only moves the pointer and scrolls (by twisting it). */
+/ {
+    keymap {
+        compatible = "zmk,keymap";
+
+        default_layer {
+            bindings = <&mkp LCLK &mkp RCLK &mkp MCLK>;
+        };
+    };
+};

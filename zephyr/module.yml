@@ -1,0 +1,7 @@
+name: rollino
+build:
+  cmake: zmk
+  kconfig: zmk/Kconfig
+  settings:
+    board_root: zmk
+    dts_root: zmk

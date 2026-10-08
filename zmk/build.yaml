@@ -1,0 +1,5 @@
+include:
+  - board: xiao_ble//zmk
+    shield: rollino
+  - board: xiao_ble//zmk
+    shield: settings_reset

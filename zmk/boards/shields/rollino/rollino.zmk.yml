@@ -1,0 +1,8 @@
+file_format: "1"
+id: rollino
+name: Rollino
+type: shield
+url: https://github.com/tompi/rollino
+requires: [seeed_xiao]
+features:
+  - pointer

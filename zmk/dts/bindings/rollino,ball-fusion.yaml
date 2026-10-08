@@ -1,0 +1,81 @@
+description: |
+  Combines two motion sensors that look at a ball from different directions
+  into pointer motion and scrolling.
+
+  Each sensor only sees the ball's surface sliding past in its own tilted
+  plane. Together they see the ball's whole rotation, which is worked out
+  (least squares) from where the sensors sit; rolling it about a horizontal
+  axis moves the pointer as if the finger on top were dragging it, and
+  twisting it about the vertical axis scrolls.
+
+  The sensors' own input events are consumed here; put a zmk,input-listener
+  on this device instead.
+
+compatible: "rollino,ball-fusion"
+
+properties:
+  pointer-scale:
+    type: int
+    default: 100
+    description: |
+      Pointer motion, in percent of the ball surface's motion (in the
+      sensors' counts) under the finger.
+
+  scroll-divisor:
+    type: int
+    default: 40
+    description: |
+      Sensor counts of twist (measured at the ball's equator) per scroll step.
+
+  invert-scroll:
+    type: boolean
+    description: |
+      Twisting counter-clockwise (seen from above) scrolls up; set this to
+      reverse it.
+
+  twist-ratio:
+    type: int
+    default: 150
+    description: |
+      A report scrolls, instead of moving the pointer, when the twist is
+      larger than this percentage of the rolling; otherwise the twist is
+      dropped. Keeps small twists while pointing from scrolling, and the
+      other way round.
+
+  period-ms:
+    type: int
+    default: 8
+    description: |
+      The sensors report independently; their motion is gathered for this
+      long before it's combined and reported.
+
+child-binding:
+  description: |
+    One sensor, and where it sits on the ball. Directions are as in the case
+    model (case/rollino.scad): azimuth from the front (towards the user),
+    positive towards the right; elevation above the ball's equator.
+
+  properties:
+    device:
+      type: phandle
+      required: true
+      description: The sensor's input device (reporting INPUT_REL_X / INPUT_REL_Y).
+
+    azimuth:
+      type: int
+      required: true
+      description: Azimuth of the sensor's optical axis, in millidegrees.
+
+    elevation:
+      type: int
+      required: true
+      description: Elevation of the sensor's optical axis, in millidegrees.
+
+    rotation:
+      type: int
+      default: 0
+      description: |
+        Direction of the sensor's X axis in its plane, in degrees: 0 points
+        down the slope (away from the ball's top), 90 sideways (horizontal,
+        towards increasing azimuth). Y is X turned 90 degrees further. Flip
+        an axis with the sensor's own invert-x / invert-y.

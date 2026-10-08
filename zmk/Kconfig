@@ -1,0 +1,5 @@
+config ROLLINO_BALL_FUSION
+    bool "Combine the Rollino's two ball sensors into pointer motion and twist scroll"
+    default y
+    depends on DT_HAS_ROLLINO_BALL_FUSION_ENABLED
+    select INPUT
