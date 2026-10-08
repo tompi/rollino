@@ -43,3 +43,8 @@ adapter/adapter-backups
 **/*-backups
 **/fp-lib-table
 **/*.kicad_sym
+
+# the Rollino PCB projects need their own library and tables
+!pcb/lib/rollino.kicad_sym
+!pcb/*/sym-lib-table
+!pcb/*/fp-lib-table

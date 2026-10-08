@@ -92,15 +92,15 @@
 
         right {
             device = <&sensor_right>;
-            azimuth = <129007>;
-            elevation = <(-24500)>;
+            azimuth = <129810>;
+            elevation = <(-23000)>;
             rotation = <0>;
         };
 
         left {
             device = <&sensor_left>;
-            azimuth = <(-129007)>;
-            elevation = <(-24500)>;
+            azimuth = <(-129810)>;
+            elevation = <(-23000)>;
             rotation = <0>;
         };
     };

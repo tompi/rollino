@@ -16,10 +16,10 @@ it, held by the same screws.
 
 - `case/rollino.scad` - parametric OpenSCAD model (ball size, sensor/MCU
   placement, battery, ...). Set `part` to `assembly`, `exploded`, `hardware`, `section`,
-  or `body` / `base_cover` for printable parts. `base_pcb` is the base PCB's
-  outline (2D); export it as DXF for the PCB's edge cuts. The console prints
-  the XIAO, screw and FPC connector positions for laying it out.
+  or `body` / `base_cover` for printable parts.
 - `case/renders/` - preview renders.
+- `pcb/` - KiCad projects for the sensor boards and the base board, with
+  schematics, generated from the case model (see [pcb/readme.md](pcb/readme.md)).
 - `datasheets/` - component datasheets. The PMW3610 datasheet is available
   [here](https://www.epsglobal.com/Media-Library/EPSGlobal/Products/files/pixart/PMW3610DM-SUDU.pdf?ext=.pdf).
 
