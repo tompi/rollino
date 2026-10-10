@@ -17,7 +17,8 @@ it, held by the same screws.
 - `case/rollino.scad` - parametric OpenSCAD model (ball size, sensor/MCU
   placement, battery, ...). Set `part` to `assembly`, `exploded`, `hardware`, `section`,
   or `body` / `base_cover` for printable parts.
-- `case/renders/` - preview renders.
+- `case/renders/` - preview renders: `case/render_previews.sh` (OpenSCAD) and
+  `case/render_exploded.sh` (Blender, with KiCad's 3D models of the boards).
 - `pcb/` - KiCad projects for the sensor boards and the base board: schematics
   and routed boards, generated from the case model (see [pcb/readme.md](pcb/readme.md)).
 

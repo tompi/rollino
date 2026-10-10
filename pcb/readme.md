@@ -14,16 +14,18 @@ Java, Blender 3.x and ImageMagick for routing and rendering):
 PY=/Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
 $PY pcb/gen/generate.py     # schematics, footprints placed on their nets
 $PY pcb/gen/route.py        # Freerouting routes every net, GND poured on both layers
-pcb/gen/render_pcbs.sh      # the renders above
+pcb/gen/render_pcbs.sh      # the renders above, the layout images and schematic PDFs
 ```
 
 They overwrite the projects, so make changes in the scripts rather than the
 KiCad files, or stop using them once you start editing the boards by hand.
 
 Both boards are routed (0.2 mm tracks, 0.15 mm clearance, 0.3 mm from the
-edges, 0.6/0.3 mm vias) and pass DRC, apart from overlapping silkscreen
-labels and, on the sensor board, the regulator's courtyard touching the
-sensor's (its copper is well clear). The schematics pass ERC.
+edges, 0.6/0.3 mm vias) and pass DRC with nothing to report, warnings
+included (`kicad-cli pcb drc --schematic-parity --severity-all`); the
+schematics pass ERC. The sensor board's references are on its fab layer
+only, as are the base board's test points' (their labels name them): the
+silkscreen has no room for them.
 
 Sensor board (`sensor/`, two needed)
 --------------------------------------
@@ -42,8 +44,18 @@ outline, ear included.
 - TPS7A0518 1.8 V LDO for the sensor's core: 1 uA quiescent, instead of the
   ~34 uA of the TLV74318 used there, which would otherwise draw more than the
   resting sensor
-- FH12-6S-0.5SH FPC connector at the board's up-slope end, mouth facing down
-  the board: the ribbon runs over the chip's back to the base board
+- FH12-6S-0.5SH FPC connector at the board's up-slope end, mouth facing off
+  the edge, so the ribbon is easy to push in and latch before the board goes
+  into its pod; the ribbon then bends back over the connector and runs over
+  the chip's back to the base board (the pod has room for the bend)
+- the ribbon's way down through the pod is roomy (5.5 mm wide, the case
+  checks it with a 1.5 mm thick stand-in: `part="fpc_check"` must be empty),
+  so its free end can be fed through from the pod or from underneath before
+  the boards go in
+- the regulator's EN is tied to its VIN by a fixed track between its rows of
+  pins (route.py keeps it): the board edge leaves no other way in
+- a small ROLLINO logo in bare copper on the back, between the edge and the
+  lens
 - board frame: origin on the optical axis, x down the slope (towards the
   table), y sideways; nothing goes behind the ear (y beyond -7.9 mm, x
   -6.9..-0.9), where the case has the screw boss
@@ -61,7 +73,8 @@ four M2 screws.
 - Seeed XIAO nRF52840 soldered **upside down** by its castellated edges: its
   parts (USB-C included) hang through the cutout into a pocket in the cover;
   its battery pads face up, and the LiPo's leads solder straight onto them
-- J1 (right sensor) and J2 (left) at the band's ends, mouths facing out
+- J1 (right sensor) and J2 (left) at the band's ends, mouths facing out, in
+  line with the sensors, so the ribbons run down flat
 - TP1-TP3: optional buttons (left, middle, right click) to TP4 (GND)
 - the ROLLINO logo is bare copper (no solder mask) on the back of the band
 - pins as in the firmware (`zmk/boards/shields/rollino/rollino.overlay`)
@@ -69,7 +82,8 @@ four M2 screws.
 Ribbons
 -------
 
-Two 6-way 0.5 mm FFCs, about 30-40 mm long. J1 pin 1 (+3V3) has to reach
+Two 6-way 0.5 mm FFCs, 40 mm long (the model's path is about 37 mm, into
+both connectors; the channel takes a little slack). J1 pin 1 (+3V3) has to reach
 pin 1 at the other end: check against the connectors' datasheet whether that
 needs a same-side (type A) or opposite-side (type B) contact cable before
 ordering.

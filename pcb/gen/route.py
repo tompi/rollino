@@ -140,7 +140,8 @@ def gnd_pour(board):
 
 def route_once(path, args):
     board = pcbnew.LoadBoard(path)
-    if len(board.GetTracks()) or board.GetAreaCount():
+    # (generate.py's few locked tracks stay: Freerouting routes round them)
+    if any(not t.IsLocked() for t in board.GetTracks()) or board.GetAreaCount():
         sys.exit(path + " is already routed: run generate.py again first")
     # a hair more clearance for Freerouting, whose rounding on the angled
     # connectors otherwise lands a few um under KiCad's rule

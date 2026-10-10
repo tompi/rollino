@@ -292,8 +292,8 @@ def write_footprints():
   (fp_rect (start -9.75 -12.2) (end 9.75 10.75) (stroke (width 0.05) (type default)) (fill none) (layer "F.CrtYd"))
   (fp_rect (start -4.5 -12.05) (end 4.5 -10.475) (stroke (width 0.1) (type default)) (fill none) (layer "F.Fab"))
   (fp_text user "USB-C" (at 0 -9 0) (layer "F.Fab") (effects (font (size 1 1) (thickness 0.15))))
-  (fp_line (start -8.9 -10.475) (end 8.9 -10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
-  (fp_line (start -8.9 10.475) (end 8.9 10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
+  (fp_line (start -8.9 10.475) (end -7.7 10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
+  (fp_line (start 7.7 10.475) (end 8.9 10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
   (fp_circle (center 10.2 -7.545) (end 10.45 -7.545) (stroke (width 0.5) (type solid)) (fill solid) (layer "F.SilkS"))
 %s
 %s)
@@ -327,6 +327,11 @@ class Schematic:
                 text = text.replace('(symbol "%s"' % lib_id.split(":")[1], '(symbol "%s"' % lib_id, 1)
             self.libs[lib_id] = text
         return self.libs[lib_id]
+
+    @staticmethod
+    def pin_names(text):
+        return {n: name for name, n in re.findall(
+            r'\(pin \w+ \w+\s*\(at [-\d.]+ [-\d.]+ \d+\).*?\(name "([^"]*)".*?\(number "([^"]+)"', text, re.S)}
 
     @staticmethod
     def pins_of(text):
@@ -456,7 +461,7 @@ class Board:
 
     def net(self, name):
         # the schematic's labels are local: their nets are "/NAME"
-        if name not in POWER_NETS:
+        if name not in POWER_NETS and not name.startswith("unconnected-"):
             name = "/" + name
         if name not in self.nets:
             n = pcbnew.NETINFO_ITEM(self.board, name)
@@ -475,7 +480,7 @@ class Board:
                 s.SetWidth(pcbnew.FromMM(0.1))
                 self.board.Add(s)
 
-    def footprint(self, lib_id, ref, value, at, rot=0, pins=None, sym_uuid=None):
+    def footprint(self, lib_id, ref, value, at, rot=0, pins=None, sym_uuid=None, pin_names=None, fab_ref=False):
         lib, name = lib_id.split(":")
         path = os.path.join(LIB, "rollino.pretty") if lib == "rollino" else os.path.join(KICAD_FOOTPRINTS, lib + ".pretty")
         fp = pcbnew.FootprintLoad(path, name)
@@ -488,11 +493,29 @@ class Board:
             fp.SetPath(pcbnew.KIID_PATH("/" + sym_uuid))
         for pad in fp.Pads():
             # connectors' mounting tabs go to GND rather than float
-            net = (pins or {}).get(pad.GetNumber(), "GND" if pad.GetNumber() == "MP" else None)
+            num = pad.GetNumber()
+            net = (pins or {}).get(num, "GND" if num == "MP" else None)
             if net:
                 pad.SetNet(self.net(net))
+            elif num in (pin_names or {}):
+                # an unconnected pin: its own net, named as the schematic's netlist names it
+                pad.SetNet(self.net("unconnected-(%s-%s-Pad%s)" % (ref, pin_names[num].replace("/", "{slash}"), num)))
+        if fab_ref:  # no room for it on the silkscreen
+            fp.Reference().SetLayer(pcbnew.F_Fab)
         self.board.Add(fp)
         return fp
+
+    def track(self, net, pts, width=0.2, layer=pcbnew.F_Cu):
+        """A locked track through pts (board mm), which route.py keeps."""
+        for a, b in zip(pts, pts[1:]):
+            t = pcbnew.PCB_TRACK(self.board)
+            t.SetStart(self.p(*a))
+            t.SetEnd(self.p(*b))
+            t.SetWidth(pcbnew.FromMM(width))
+            t.SetLayer(layer)
+            t.SetNet(self.net(net))
+            t.SetLocked(True)
+            self.board.Add(t)
 
     def text(self, s, at, size=1.0, layer=pcbnew.F_SilkS, angle=0, thickness=0.15):
         t = pcbnew.PCB_TEXT(self.board)
@@ -562,9 +585,11 @@ def sensor(geo, symlib):
          (-2.988, 0), 0),
         # the case's screw boss is behind the ear (y -7.9 and beyond, x -6.9..-0.9): nothing there
         ("U2", "Regulator_Linear:TPS7A0518PDBV", "TPS7A0518PDBVR", "Package_TO_SOT_SMD:SOT-23-5", (120, 50),
-         {"1": "+3V3", "3": "+3V3", "2": "GND", "4": None, "5": "+1V8"}, (0.8, -7.9), 180),
+         {"1": "+3V3", "3": "+3V3", "2": "GND", "4": None, "5": "+1V8"}, (0.9, -8.35), 180),
+        # mouth facing off the up-slope edge, 0.5 mm in from it, where the
+        # ribbon is easy to push in and latch
         ("J1", FPC_SYMBOL, FPC_VALUE, FPC_FP, (60, 110),
-         dict({str(i + 1): n for i, n in enumerate(FPC_PINS)}, MP="GND"), (s["sc"] - s["pcb_end"] + 0.4 - FPC_TAIL, 0), 90),
+         dict({str(i + 1): n for i, n in enumerate(FPC_PINS)}, MP="GND"), (s["sc"] - s["pcb_end"] + 0.5 + FPC_MOUTH, 0), 270),
         ("R1", "Device:R", "10k", R0603, (215, 50), {"1": "+3V3", "2": "NRESET"}, (-8.0, -7.4), 0),
         ("C3", "Device:C", "100nF", C0603, (80, 50), {"1": "+3V3", "2": "GND"}, (-11.0, -7.4), 0),
         # upright on the other side, by the pins they serve
@@ -580,7 +605,13 @@ def sensor(geo, symlib):
     for ref, lib_id, value, fp, at, pins, bat, brot in parts:
         text = symlib.get(lib_id)
         u = sch.symbol(ref, lib_id, value, fp, at, pins, text=text)
-        b.footprint(fp, ref, value, bat, brot, pins, u)
+        # the board's too crowded for references on its silkscreen
+        b.footprint(fp, ref, value, bat, brot, pins, u, Schematic.pin_names(sch.lib(lib_id, text)), fab_ref=True)
+    # U2's EN (pin 3) is boxed in by the board edge: tie it to VIN (pin 1)
+    # down the gap between the package's two rows of pins, which Freerouting
+    # won't use
+    ux, uy = 0.9, -8.35
+    b.track("+3V3", [(ux + 1.1375, uy - 0.95), (ux, uy - 0.95), (ux, uy + 0.95), (ux + 1.1375, uy + 0.95)])
     u = sch.symbol("H1", "Mechanical:MountingHole", "M2", "MountingHole:MountingHole_2.2mm_M2", (230, 50), {}, bom=False)
     b.footprint("MountingHole:MountingHole_2.2mm_M2", "H1", "M2", (s["ear"][0], -s["ear"][1]), sym_uuid=u)
     sch.flag("+3V3", (40, 30))
@@ -588,6 +619,11 @@ def sensor(geo, symlib):
     sch.text("J1 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - same pinout as J1/J2 on the base board", (25, 160))
     sch.text("Board frame: origin on the optical axis, x down the slope; mounted chip side out, lens towards the ball", (25, 166))
     sch.write(os.path.join(d, name + ".kicad_sch"))
+    # a small logo in bare copper on the back, across the up-slope end,
+    # between the edge and the lens
+    lens_end = s["sc"] - 10
+    for layer in (pcbnew.B_Cu, pcbnew.B_Mask):
+        b.text("ROLLINO", ((s["sc"] - s["pcb_end"] + lens_end) / 2, 0), 1.5, layer, 90, 0.2)
     b.save(os.path.join(d, name + ".kicad_pcb"))
 
 
@@ -612,7 +648,8 @@ def base(geo, symlib):
     u = sch.symbol("U1", "rollino:XIAO_nRF52840", "XIAO nRF52840", "rollino:XIAO_nRF52840_upside_down",
                    (110, 95), xiao_pins, text=symlib["rollino:XIAO_nRF52840"])
     # USB end towards the front (board +y): the footprint's -y turned round
-    b.footprint("rollino:XIAO_nRF52840_upside_down", "U1", "XIAO nRF52840", kp(pos["xiao_center"]), 180, xiao_pins, u)
+    b.footprint("rollino:XIAO_nRF52840_upside_down", "U1", "XIAO nRF52840", kp(pos["xiao_center"]), 180, xiao_pins, u,
+                Schematic.pin_names(symlib["rollino:XIAO_nRF52840"]))
 
     # FPC connectors, mouth facing out, right sensor first
     for i, (foot, ang) in enumerate(pos["fpc"]):
@@ -624,15 +661,19 @@ def base(geo, symlib):
         ux, uy = math.cos(math.radians(ang)), -math.sin(math.radians(ang))  # board direction of the mouth
         mid = (FPC_TAIL + FPC_MOUTH) / 2
         fx, fy = kp(foot)
-        b.footprint(FPC_FP, ref, FPC_VALUE, (fx - mid * ux, fy - mid * uy), mouth_rotation(ux, uy), pins, u)
-        b.text(side, (fx - (mid + 6) * ux, fy - (mid + 6) * uy), 1.2)
+        # (its reference would hang over the band's edge: the label names it)
+        b.footprint(FPC_FP, ref, FPC_VALUE, (fx - mid * ux, fy - mid * uy), mouth_rotation(ux, uy), pins, u, fab_ref=True)
+        # its label on the band, a little way round towards the front
+        az = math.atan2(foot[0], -foot[1])
+        az -= math.copysign(math.radians(15), az)
+        b.text(side, kp((28.25 * math.sin(az), -28.25 * math.cos(az))), 1.2)
 
     # optional buttons (to GND) and a GND pad, on the band near the front
     for i, (net, az) in enumerate([("BTN_L", -35), ("BTN_M", -50), ("BTN_R", 35), ("GND", 50)]):
         ref = "TP%d" % (i + 1)
         u = sch.symbol(ref, "Connector:TestPoint", net, "TestPoint:TestPoint_Pad_D1.5mm", (60 + 20 * i, 145), {"1": net}, bom=False)
         w = (27.5 * math.sin(math.radians(az)), -27.5 * math.cos(math.radians(az)))
-        b.footprint("TestPoint:TestPoint_Pad_D1.5mm", ref, net, kp(w), 0, {"1": net}, u)
+        b.footprint("TestPoint:TestPoint_Pad_D1.5mm", ref, net, kp(w), 0, {"1": net}, u, fab_ref=True)
         b.text(net.replace("BTN_", ""), (kp(w)[0], kp(w)[1] - 2.0), 0.8)
 
     for i, w in enumerate(pos["screws"]):

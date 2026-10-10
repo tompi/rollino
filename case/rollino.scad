@@ -17,9 +17,14 @@
 /* [View] */
 // assembly | exploded | section | hardware | body | base_cover |
 // base_pcb / sensor_pcb (2D board outlines, for ../pcb/gen/generate.py)
-part = "assembly";
+part = "body";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
+// part="exploded" draws only this piece of it, if set (body, ball,
+// supports, sensor_boards, electronics, base_pcb, cover, screws, or the
+// battery's pouch, pcm and leads): ../case/render_exploded.sh renders it in
+// Blender a piece at a time, with KiCad's models of the boards
+explode_only = "";
 
 /* [Ball] */
 ball_d = 55;
@@ -93,11 +98,21 @@ pcb_screw_side = 1;
 // FPC connector, 6-pin 0.5 mm (Hirose FH12-6S-0.5SH, or a clone such as
 // JUSHUO AFC01-S06FCA): [length, depth with its solder tails, height]. It
 // sits on the sensor board's back beyond the chip's up-slope end, mouth
-// facing down the slope, so the ribbon (6 x 0.5 mm FFC, fpc_w wide) runs
-// down over the chip's back, past the board's low end and down to the base
-// PCB, which has the same connector under each sensor
+// facing off the board's up-slope edge, where the ribbon (6 x 0.5 mm FFC,
+// fpc_w wide) is easy to push in and latch before the board goes in; it
+// then bends back over the connector, runs down over the chip's back, past
+// the board's low end and down to the base PCB, which has the same
+// connector under each sensor
 fpc_conn = [8.1, 7.1, 2.1];
 fpc_w = 3.5;
+// room past the board's up-slope edge for the ribbon's U-turn
+fpc_bend = 2.6;
+// the ribbon's channel down to the base PCB, roomy enough to feed its end
+// through from either end before the boards go in: [width, depth over the
+// chip]; the case checks the room with a ribbon this much thicker (and
+// 1 mm wider) than it is: part="fpc_check" must come out empty
+fpc_chan = [fpc_w + 2, 1.6];
+fpc_clear = 1.5;
 // the sensor board reaches this much further up the slope than the
 // symmetric pcb_w, for that connector (up there it doesn't push the sensors
 // up the ball, as a longer low end would)
@@ -157,9 +172,9 @@ base_pcb_t = 1.6;
 // support balls' holes come down close, outside it the rim's foot is rounded
 base_band_r = [24, 32.5];
 // the band ends just past an FPC connector under each sensor, mouth facing
-// out (the ribbon comes down just outside it); pocket over it, for it and
-// the ribbon's bend: [beyond the mouth, height]
-fpc_pocket = [1.5, fpc_conn.z + 1.5];
+// out, in line with the ribbon coming down just outside it; pocket over it,
+// for it and the ribbon's bend: [beyond the mouth, height]
+fpc_pocket = [2.5, fpc_conn.z + 1.5];
 // extra screws on the band: [azimuth, radius] (plus two under the front
 // pod), and the pilot holes' depth above the PCB (the rim is only rim_h tall)
 base_screws_polar = [[75, 27.5], [-75, 27.5]];
@@ -258,14 +273,14 @@ module pcb_outline(s, m = 0) {
 chip_in = [16.2 + 0.6, sp_in.y];
 
 // [x0, x1, y half-width, z0, z1] for the lens, PCB slot, chip zone, the FPC
-// connector at the board's up-slope end and its ribbon's channel over the
-// chip's back
+// connector at the board's up-slope end with the ribbon's U-turn past the
+// edge and back over it, and the ribbon's channel over the chip's back
 sensor_zones = [
   [sc - lens_w / 2, sc + lens_w / 2, lens_h / 2, 0.8, pcb_top_z - pcb_t],
   [sc - pcb_end - 0.3, sc + sp_in.x / 2, sp_in.y / 2, pcb_top_z - pcb_t, pcb_top_z + 0.3],
   [sc - chip_in.x / 2, sc + chip_in.x / 2, chip_in.y / 2, pcb_top_z, pcb_top_z + parts_h],
-  [sc - pcb_end - 0.3, sc - pcb_end + fpc_conn.y + 0.3, fpc_conn.x / 2 + 0.3, pcb_top_z, pcb_top_z + fpc_conn.z + 0.3],
-  [sc - pcb_end + fpc_conn.y, sc + sp_in.x / 2 + 2, fpc_w / 2 + 0.6, pcb_top_z + parts_h - 0.5, pcb_top_z + parts_h + 1]];
+  [sc - pcb_end - fpc_bend, sc - pcb_end + fpc_conn.y + 0.3, fpc_conn.x / 2 + 0.3, pcb_top_z, pcb_top_z + fpc_conn.z + 1.2],
+  [sc - pcb_end - fpc_bend, sc + sp_in.x / 2 + 2.5, fpc_chan.x / 2, pcb_top_z + 1, pcb_top_z + parts_h + fpc_chan.y]];
 
 module zone(z, m = 0) {
   translate([z[0] - m, -z[2] - m, z[3] - m]) cube([z[1] - z[0] + 2 * m, 2 * z[2] + 2 * m, z[4] - z[3] + 2 * m]);
@@ -449,9 +464,10 @@ module base_cuts() {
   for (az = sensor_az_) {
     translate(fpc_foot(az)) rotate(fpc_ang(az))
       translate([-fpc_conn.y / 2 - 0.3, -fpc_conn.x / 2 - 0.5, -eps]) cube([fpc_conn.y + 0.3 + fpc_pocket[0], fpc_conn.x + 1, fpc_pocket[1]]);
+    // the ribbon's way down from the sensor pod's channel to just beyond the mouth
     hull() {
-      at_ball(az, sensor_el_) translate(fpc_top(az)) cube([2, fpc_w + 1.2, 1.5], center = true);
-      translate(fpc_foot(az)) rotate(fpc_ang(az)) translate([fpc_conn.y / 2 + 1.2, 0, 1.5]) cube([2.4, fpc_w + 1.2, 2], center = true);
+      at_ball(az, sensor_el_) translate(fpc_top(az)) cube([3, fpc_chan.x, 2.5], center = true);
+      translate(fpc_foot(az)) rotate(fpc_ang(az)) translate([fpc_conn.y / 2 + 1.5, 0, 1.75]) cube([3, fpc_chan.x, 3.5], center = true);
     }
   }
   for (p = base_screws) translate([p.x, p.y, base_top - eps]) cylinder(d = pcb_screw_d, h = base_screw_depth, $fn = 16);
@@ -465,19 +481,25 @@ module base_fpc_conns() {
 
 // the ribbons, out of the sensor board's connector, down over the chip's
 // back, past the board's low end and into the base PCB's connector (visual only)
-module ribbons() {
-  for (az = sensor_az_) color("goldenrod") {
-    mouth = [sc - pcb_end + fpc_conn.y, 0, pcb_top_z + 1];
-    over = [sc - pcb_end + fpc_conn.y + 1, 0, pcb_top_z + parts_h + 0.25];
-    hull() at_ball(az, sensor_el_) for (p = [mouth, over]) translate(p) cube([0.1, fpc_w, 0.1], center = true);
-    hull() at_ball(az, sensor_el_) for (p = [over, fpc_top(az)]) translate(p) cube([0.1, fpc_w, 0.1], center = true);
-    hull() {
-      at_ball(az, sensor_el_) translate(fpc_top(az)) cube([0.1, fpc_w, 0.1], center = true);
-      translate(fpc_foot(az)) rotate(fpc_ang(az)) translate([fpc_conn.y / 2 + 0.8, 0, 1]) cube([0.1, fpc_w, 0.1], center = true);
-    }
-    hull() translate(fpc_foot(az)) rotate(fpc_ang(az)) for (x = [fpc_conn.y / 2 + 0.8, fpc_conn.y / 2 - 1.5])
-      translate([x, 0, 1]) cube([0.1, fpc_w, 0.1], center = true);
+module ribbons() { for (az = sensor_az_) color("goldenrod") ribbon(az); }
+
+// one ribbon's path, as a strip w wide and t thick (thicker, it checks
+// there's room to pull the ribbon through: see fpc_clear)
+module ribbon(az, t = 0.1, w = fpc_w) {
+  // into the mouth at the board's up-slope edge, round the U-turn, back
+  // over the connector and up over the chip
+  path = [[sc - pcb_end + 1.5, 0, pcb_top_z + 0.9], [sc - pcb_end - 0.6, 0, pcb_top_z + 0.9],
+          [sc - pcb_end - fpc_bend / 2, 0, pcb_top_z + 1.6], [sc - pcb_end - 0.6, 0, pcb_top_z + fpc_conn.z + 0.3],
+          [sc - pcb_end + fpc_conn.y, 0, pcb_top_z + fpc_conn.z + 0.3],
+          [sc - pcb_end + fpc_conn.y + 1.5, 0, pcb_top_z + parts_h + 0.25], fpc_top(az)];
+  for (i = [0 : len(path) - 2])
+    hull() at_ball(az, sensor_el_) for (p = [path[i], path[i + 1]]) translate(p) cube([t, w, t], center = true);
+  hull() {
+    at_ball(az, sensor_el_) translate(fpc_top(az)) cube([t, w, t], center = true);
+    translate(fpc_foot(az)) rotate(fpc_ang(az)) translate([fpc_conn.y / 2 + 0.8, 0, 1]) cube([t, w, t], center = true);
   }
+  hull() translate(fpc_foot(az)) rotate(fpc_ang(az)) for (x = [fpc_conn.y / 2 + 0.8, fpc_conn.y / 2 - 1.5])
+    translate([x, 0, 1]) cube([t, w, t], center = true);
 }
 
 // ---------- body ----------
@@ -529,7 +551,7 @@ module supports() {
 }
 
 // sensor board with its ear on side s, and the FPC connector at its
-// up-slope end
+// up-slope end (mouth at the edge)
 module sensor_board(s) {
   color("darkgreen") translate([sc, 0, pcb_top_z - pcb_t])
     linear_extrude(pcb_t) difference() {
@@ -555,17 +577,23 @@ module electronics(model = true) {
         translate([0, -xiao.y / 2, 0]) cube(xiao);
         translate([-usb_overhang, -4.5, xiao.z]) cube([7.5, 9, 3.2]);
       }
-    translate([0.3, (elec_size.y - batt.y) / 2, xiao.z + xiao_pads + batt_gap]) lipo();
   }
+  battery();
+}
+
+module battery(only = "") {
+  at_elec() translate([0.3, (elec_size.y - batt.y) / 2, xiao.z + xiao_pads + batt_gap]) lipo(only);
 }
 
 // pouch cell in [0, batt]: the pouch, then the taped protection board at the
 // +x end with its two leads, folded down to the XIAO's back
-module lipo() {
-  color("silver") translate([(batt.x - batt_pcm) / 2, batt.y / 2, batt.z / 2]) rbox([batt.x - batt_pcm, batt.y, batt.z], 1.2);
-  color("gold") translate([batt.x - batt_pcm / 2 - 0.1, batt.y / 2, batt.z / 2])
-    rbox([batt_pcm + 0.2, batt.y - 2, batt.z * 0.75], 0.6);
-  for (s = [-1, 1]) color(s < 0 ? "black" : "red")
+module lipo(only = "") {
+  if (only == "" || only == "pouch")
+    color("silver") translate([(batt.x - batt_pcm) / 2, batt.y / 2, batt.z / 2]) rbox([batt.x - batt_pcm, batt.y, batt.z], 1.2);
+  if (only == "" || only == "pcm")
+    color("gold") translate([batt.x - batt_pcm / 2 - 0.1, batt.y / 2, batt.z / 2])
+      rbox([batt_pcm + 0.2, batt.y - 2, batt.z * 0.75], 0.6);
+  if (only == "" || only == "leads") for (s = [-1, 1]) color(s < 0 ? "black" : "red")
     translate([batt.x + 0.5, batt.y / 2 + s * 2, 0]) tube([[-0.7, 0, batt.z / 2], [0, 0, batt.z / 2 - 0.5], [0, 0, -batt_gap]], 0.8);
 }
 
@@ -602,19 +630,27 @@ module screw(l, head_d = 3.8) {
 // balls up, the sensor boards in towards the ball, the base PCB (with the
 // XIAO and battery on it) down out of the case, the cover below that, and
 // the screws below it
-module exploded(d = 25) {
-  color("#d8d4cc") body();
-  color("firebrick") translate([0, 0, zc + 2.2 * d]) sphere(r = R, $fn = 128);
-  translate([0, 0, d]) supports();
-  for (az = sensor_az_) at_ball(az, sensor_el_) translate([0, 0, -0.8 * d]) sensor_board(pcb_screw_side);
+explode_d = 25;
+module exploded(d = explode_d, only = "") {
+  function show(p) = only == "" || only == p;
+  if (show("body")) color("#d8d4cc") body();
+  if (show("ball")) color("firebrick") translate([0, 0, zc + 2.2 * d]) sphere(r = R, $fn = 128);
+  if (show("supports")) translate([0, 0, d]) supports();
+  if (show("sensor_boards")) for (az = sensor_az_) at_ball(az, sensor_el_) translate([0, 0, -0.8 * d]) sensor_board(pcb_screw_side);
   translate([0, 0, -d]) {
-    electronics();
-    base_pcb();
-    base_fpc_conns();
+    if (show("electronics")) electronics();
+    if (show("base_pcb")) { base_pcb(); base_fpc_conns(); }
+    for (p = ["pouch", "pcm", "leads"]) if (only == p) battery(p);
   }
-  translate([0, 0, -1.8 * d]) color("#b8b4ac") base_cover();
-  for (p = base_screws) translate([p.x, p.y, floor_z - 1.8 * d - 4]) rotate([180, 0, 0]) screw(8);
+  if (show("cover")) translate([0, 0, -1.8 * d]) color("#b8b4ac") base_cover();
+  if (show("screws")) for (p = base_screws) translate([p.x, p.y, floor_z - 1.8 * d - 4]) rotate([180, 0, 0]) screw(8);
 }
+
+// the same placements as 4x4 matrices, for the render: at_ball(az, el)
+function m_tr(v) = [[1, 0, 0, v.x], [0, 1, 0, v.y], [0, 0, 1, v.z], [0, 0, 0, 1]];
+function m_rz(a) = [[cos(a), -sin(a), 0, 0], [sin(a), cos(a), 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
+function m_ry(a) = [[cos(a), 0, sin(a), 0], [0, 1, 0, 0], [-sin(a), 0, cos(a), 0], [0, 0, 0, 1]];
+function at_ball_m(az, el) = m_tr([0, 0, zc]) * m_rz(az - 90) * m_ry(90 - el) * m_tr([0, 0, R]);
 
 // ball, sensor boards and electronics only, over a translucent table
 module hardware() {
@@ -628,13 +664,15 @@ module hardware() {
 }
 
 if (part == "assembly") assembly();
-else if (part == "exploded") exploded();
+else if (part == "exploded") exploded(only = explode_only);
 else if (part == "hardware") hardware();
 else if (part == "section") assembly(true);
 else if (part == "body") body();
 else if (part == "base_cover") base_cover();
 else if (part == "base_pcb") difference() { base_pcb_shape(); projection() xiao_cutout(1); }
 else if (part == "sensor_pcb") translate([sc, 0]) pcb_outline(pcb_screw_side);
+// what's in the way of a ribbon fpc_clear thicker than it is: should be empty
+else if (part == "fpc_check") intersection() { body(); for (az = sensor_az_) ribbon(az, fpc_clear, fpc_w + 1); }
 
 echo(str("ball top z = ", zc + R, "  sensor el = ", sensor_el_, "  sensor az = ", sensor_az_,
           "  elec pod top z = ", at_elec_pt([0, 0, -elec_floor + elec_box.z / 2]).z + elec_dome_r.z,
@@ -643,6 +681,11 @@ echo(str("ball top z = ", zc + R, "  sensor el = ", sensor_el_, "  sensor az = "
 echo(str("base PCB: XIAO board corner at USB end, left = ", at_elec_pt([0.3 + usb_overhang, (elec_size.y + xiao.y) / 2, 0]),
          "  screws = ", base_screws,
          "  FPC connectors (centre, angle its mouth faces) = ", [for (az = sensor_az_) [fpc_foot(az), fpc_ang(az)]]));
+
+// for render_exploded.py: where each board's top face goes in the exploded
+// view, as matrices from the board's KiCad frame (x, -y, z up from its top)
+echo(str("EXPLODED {\"sensor\": ", [for (az = sensor_az_) at_ball_m(az, sensor_el_) * m_tr([0, 0, pcb_top_z - 0.8 * explode_d])],
+         ", \"base\": ", m_tr([0, 0, base_top - explode_d]), "}"));
 
 // machine-readable, for ../pcb/gen/generate.py: base PCB positions in world
 // x/y, sensor board positions in its own frame (origin on the optical axis,
