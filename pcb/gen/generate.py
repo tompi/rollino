@@ -532,6 +532,20 @@ class Board:
         self.board.Save(path)
 
 
+def fpc_pins(rot, e, extra):
+    """An FPC connector's pins, numbered so that each signal meets itself
+    through the ribbon: the nets go in FPC_PINS order along e (the way, in
+    the board's frame with y up, the ribbon's conductors run there in the
+    order they run along the sensor board's +y). The pads are 1 to 6 along
+    the footprint's +x, which rotation rot (KiCad's: anticlockwise, y down)
+    turns to (cos, sin) in y-up terms."""
+    th = math.radians(rot)
+    order = FPC_PINS if math.cos(th) * e[0] + math.sin(th) * e[1] > 0 else FPC_PINS[::-1]
+    pins = {str(k + 1): extra.get(n, n) for k, n in enumerate(order)}
+    pins["MP"] = "GND"
+    return pins
+
+
 def mouth_rotation(ux, uy):
     """Footprint rotation (degrees) that turns a footprint's +y (screen)
     towards KiCad direction (ux, uy)."""
@@ -588,8 +602,7 @@ def sensor(geo, symlib):
          {"1": "+3V3", "3": "+3V3", "2": "GND", "4": None, "5": "+1V8"}, (0.9, -8.35), 180),
         # mouth facing off the up-slope edge, 0.5 mm in from it, where the
         # ribbon is easy to push in and latch
-        ("J1", FPC_SYMBOL, FPC_VALUE, FPC_FP, (60, 110),
-         dict({str(i + 1): n for i, n in enumerate(FPC_PINS)}, MP="GND"), (s["sc"] - s["pcb_end"] + 0.5 + FPC_MOUTH, 0), 270),
+        ("J1", FPC_SYMBOL, FPC_VALUE, FPC_FP, (60, 110), fpc_pins(270, (0, 1), {}), (s["sc"] - s["pcb_end"] + 0.5 + FPC_MOUTH, 0), 270),
         ("R1", "Device:R", "10k", R0603, (215, 50), {"1": "+3V3", "2": "NRESET"}, (-8.0, -7.4), 0),
         ("C3", "Device:C", "100nF", C0603, (80, 50), {"1": "+3V3", "2": "GND"}, (-11.0, -7.4), 0),
         # upright on the other side, by the pins they serve
@@ -616,7 +629,7 @@ def sensor(geo, symlib):
     b.footprint("MountingHole:MountingHole_2.2mm_M2", "H1", "M2", (s["ear"][0], -s["ear"][1]), sym_uuid=u)
     sch.flag("+3V3", (40, 30))
     sch.flag("GND", (25, 30))
-    sch.text("J1 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - same pinout as J1/J2 on the base board", (25, 160))
+    sch.text("J1 (FPC): pins numbered so each signal meets itself through the ribbon (see pcb/readme.md)", (25, 160))
     sch.text("Board frame: origin on the optical axis, x down the slope; mounted chip side out, lens towards the ball", (25, 166))
     sch.write(os.path.join(d, name + ".kicad_sch"))
     # a small logo in bare copper on the back, across the up-slope end,
@@ -651,18 +664,19 @@ def base(geo, symlib):
     b.footprint("rollino:XIAO_nRF52840_upside_down", "U1", "XIAO nRF52840", kp(pos["xiao_center"]), 180, xiao_pins, u,
                 Schematic.pin_names(symlib["rollino:XIAO_nRF52840"]))
 
-    # FPC connectors, mouth facing out, right sensor first
-    for i, (foot, ang) in enumerate(pos["fpc"]):
+    # FPC connectors at the band's ends, along it, mouths facing the ribbons;
+    # right sensor first
+    for i, (foot, ang, e) in enumerate(pos["fpc"]):
         side = "R" if foot[0] > 0 else "L"
         ref = "J%d" % (i + 1)
-        pins = {str(k + 1): (n + "_" + side if n in ("NCS", "MOTION") else n) for k, n in enumerate(FPC_PINS)}
-        pins["MP"] = "GND"
-        u = sch.symbol(ref, FPC_SYMBOL, FPC_VALUE, FPC_FP, (215, 70 + 45 * i), pins)
         ux, uy = math.cos(math.radians(ang)), -math.sin(math.radians(ang))  # board direction of the mouth
+        rot = mouth_rotation(ux, uy)
+        pins = fpc_pins(rot, e, {"NCS": "NCS_" + side, "MOTION": "MOTION_" + side})
+        u = sch.symbol(ref, FPC_SYMBOL, FPC_VALUE, FPC_FP, (215, 70 + 45 * i), pins)
         mid = (FPC_TAIL + FPC_MOUTH) / 2
         fx, fy = kp(foot)
         # (its reference would hang over the band's edge: the label names it)
-        b.footprint(FPC_FP, ref, FPC_VALUE, (fx - mid * ux, fy - mid * uy), mouth_rotation(ux, uy), pins, u, fab_ref=True)
+        b.footprint(FPC_FP, ref, FPC_VALUE, (fx - mid * ux, fy - mid * uy), rot, pins, u, fab_ref=True)
         # its label on the band, a little way round towards the front
         az = math.atan2(foot[0], -foot[1])
         az -= math.copysign(math.radians(15), az)
@@ -683,7 +697,7 @@ def base(geo, symlib):
 
     sch.flag("GND", (40, 30))
     sch.text("XIAO pins as in zmk/boards/shields/rollino/rollino.overlay; NCS/MOTION _R = right sensor (J1), _L = left (J2)", (25, 175))
-    sch.text("J1/J2 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - same pinout as the sensor board's J1", (25, 181))
+    sch.text("J1/J2 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - or reversed, so each signal meets itself through the ribbon", (25, 181))
     sch.text("SDIO goes to both SPI MOSI (D10) and MISO: the firmware puts them on the same pin", (25, 187))
     sch.write(os.path.join(d, name + ".kicad_sch"))
     # the logo in bare copper on the back of the band's left side, clear of

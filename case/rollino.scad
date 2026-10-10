@@ -171,10 +171,17 @@ base_pcb_t = 1.6;
 // each sensor: [inner, outer] radius; inside it the ball's cup and the
 // support balls' holes come down close, outside it the rim's foot is rounded
 base_band_r = [24, 32.5];
-// the band ends just past an FPC connector under each sensor, mouth facing
-// out, in line with the ribbon coming down just outside it; pocket over it,
-// for it and the ribbon's bend: [beyond the mouth, height]
-fpc_pocket = [2.5, fpc_conn.z + 1.5];
+// the ribbons are stock fpc_len FFCs (40 mm ones are hard to get): each
+// comes down from its sensor pod under the band's old end, turns in, and
+// with a 45-ish degree crease lies flat along a channel in the case's
+// underside (the cover holds it), straight into an FPC connector that faces
+// it at the end of the band; the band ends there, its length set by what
+// the ribbon needs, less fpc_slack for leeway. Pocket over the connector
+// (the ribbon goes in before the board goes up into the case, so it only
+// needs room for the closed connector): [beyond the mouth, height]
+fpc_len = 50;
+fpc_slack = 1.5;
+fpc_pocket = [0.5, fpc_conn.z + 0.8];
 // extra screws on the band: [azimuth, radius] (plus two under the front
 // pod), and the pilot holes' depth above the PCB (the rim is only rim_h tall)
 base_screws_polar = [[75, 27.5], [-75, 27.5]];
@@ -385,14 +392,44 @@ module xiao_cutout(h, d = 0) {
 function polar2(az, r) = [r * sin(az), -r * cos(az)];
 
 // where a ribbon, having run over the chip's back, turns down past the
-// board's low end (sensor frame), and where it comes down onto the base PCB
-// (world)
+// board's low end (sensor frame)
 function fpc_top(az) = [sc + sp_in.x / 2 + 1, 0, pcb_top_z + parts_h + 0.25];
-function fpc_foot(az) = concat(polar2(az, base_band_r[1] - 0.4 - fpc_conn.y / 2), [base_top]);
-// plan angle (from +x) of a connector's mouth: it faces straight out
-function fpc_ang(az) = let(f = fpc_foot(az)) atan2(f.y, f.x);
-// how far round the band reaches: just past the connectors
-base_band_end = max([for (az = sensor_az_) abs(az)]) + (fpc_conn.x / 2 + 1.2) / (base_band_r[1] - fpc_conn.y / 2) * 180 / PI;
+// the ribbon's path in the sensor pod (sensor frame): into the mouth at the
+// board's up-slope edge, round the U-turn, back over the connector, over
+// the chip and down to fpc_top
+function fpc_path(az) = [
+  [sc - pcb_end + 1.5, 0, pcb_top_z + 0.9], [sc - pcb_end - 0.6, 0, pcb_top_z + 0.9],
+  [sc - pcb_end - fpc_bend / 2, 0, pcb_top_z + 1.6], [sc - pcb_end - 0.6, 0, pcb_top_z + fpc_conn.z + 0.3],
+  [sc - pcb_end + fpc_conn.y, 0, pcb_top_z + fpc_conn.z + 0.3],
+  [sc - pcb_end + fpc_conn.y + 1.5, 0, pcb_top_z + parts_h + 0.25], fpc_top(az)];
+function path_len(p) = len(p) < 2 ? 0 : [for (i = [0 : len(p) - 2]) norm(p[i + 1] - p[i])] * [for (i = [0 : len(p) - 2]) 1];
+// under the case (world): it comes in from fpc_top to the crease, at the
+// sensor's azimuth and the mouth's height, then runs straight along the
+// band (a tangent to its middle) into the connector, 1.5 mm into its mouth;
+// the run is whatever length the ribbon has left
+fpc_z = base_top + 1;
+fpc_mid_r = (base_band_r[0] + base_band_r[1]) / 2;
+function fpc_used(az, c) = path_len([for (q = fpc_path(az)) at_ball_pt(az, sensor_el_, q)])
+  + norm(c - at_ball_pt(az, sensor_el_, fpc_top(az))) + 1.5;
+function fpc_crease_at(az, run) = concat(polar2(az, norm([fpc_mid_r, run + fpc_conn.y / 2])), [fpc_z]);
+// (the crease moves out as the run grows: a few rounds settle it)
+function fpc_run(az, n = 6, run = 0) =
+  n == 0 ? run : fpc_run(az, n - 1, fpc_len - fpc_slack - fpc_used(az, fpc_crease_at(az, run)));
+function fpc_crease(az) = fpc_crease_at(az, fpc_run(az));
+// the connector, on the band's middle and along it, facing the crease
+function fpc_foot_az(az) = az - sign(az) * atan((fpc_run(az) + fpc_conn.y / 2) / fpc_mid_r);
+function fpc_foot(az) = concat(polar2(fpc_foot_az(az), fpc_mid_r), [base_top]);
+// plan angle (from +x) of a connector's mouth, and where it is
+function fpc_ang(az) = fpc_foot_az(az) + (az > 0 ? 0 : 180);
+function fpc_mouth(az) = let(f = fpc_foot(az), a = fpc_ang(az))
+  [f.x + fpc_conn.y / 2 * cos(a), f.y + fpc_conn.y / 2 * sin(a), fpc_z];
+// which way (plan, world) the ribbon's conductors run at the connector, in
+// the order they run along the sensor board's +y: bends and twists keep
+// the ribbon's frame, and the crease turns it face up, so it's up x the way
+// the ribbon goes in (for ../pcb/gen/generate.py, which numbers the pins)
+function fpc_e(az) = let(a = fpc_ang(az)) [sin(a), -cos(a)];
+// how far round the band reaches: a little past the mouths
+base_band_end = max([for (az = sensor_az_) let(m = fpc_mouth(az)) abs(atan2(m.x, -m.y))]) + 1.5 / fpc_mid_r * 180 / PI;
 
 base_screws = concat(
   [for (s = [-1, 1]) let(p = at_elec_pt([elec_size.x / 2, elec_size.y / 2 + s * elec_screw_y, 0])) [p.x, p.y]],
@@ -411,6 +448,7 @@ module base_pcb_shape(m = 0) {
   a1 = base_band_end;
   offset(r = m) offset(r = 1.5) offset(delta = -1.5) intersection() {
    offset(delta = -m) base_inside();
+   union() {
    difference() {
     union() {
       intersection() {
@@ -423,6 +461,9 @@ module base_pcb_shape(m = 0) {
     circle(r = base_band_r[0], $fn = 96);     // keeps the tongue clear of the ball's cup too
     nh = usb_plug.x / 2 + wall + 0.3;
     projection() at_elec() translate([-40, elec_size.y / 2 - nh, 0]) cube([40 + wall + 0.3, 2 * nh, 1]);
+   }
+   // round the connectors, a little wider than the band
+   for (az = sensor_az_) translate(fpc_foot(az)) rotate(fpc_ang(az)) square([fpc_conn.y + 1.2, fpc_conn.x + 1.2], center = true);
    }
   }
 }
@@ -457,23 +498,36 @@ module base_cover() {
 }
 
 // what the base PCB takes out of the body: its groove (from the cover up), the pockets over the
-// FPC connectors, the ribbons' slots up into the sensor pods, and the screws'
-// pilot holes
+// FPC connectors, the ribbons' ways down from the sensor pods and their
+// channels along the underside (open to the cover, so the ribbons go in from
+// below), and the screws' pilot holes
 module base_cuts() {
   translate([0, 0, floor_z - 1]) linear_extrude(1 + elec_floor + 0.2) base_pcb_shape(0.3);
+  z0 = floor_z + base_cover_t - eps;
+  h = fpc_z + 1.6 - z0;
   for (az = sensor_az_) {
     translate(fpc_foot(az)) rotate(fpc_ang(az))
-      translate([-fpc_conn.y / 2 - 0.3, -fpc_conn.x / 2 - 0.5, -eps]) cube([fpc_conn.y + 0.3 + fpc_pocket[0], fpc_conn.x + 1, fpc_pocket[1]]);
-    // the ribbon's way down from the sensor pod's channel to just beyond the mouth
+      translate([-fpc_conn.y / 2 - 0.3, -fpc_conn.x / 2 - 0.3, -eps]) cube([fpc_conn.y + 0.3 + fpc_pocket[0], fpc_conn.x + 0.6, fpc_pocket[1]]);
     hull() {
       at_ball(az, sensor_el_) translate(fpc_top(az)) cube([3, fpc_chan.x, 2.5], center = true);
-      translate(fpc_foot(az)) rotate(fpc_ang(az)) translate([fpc_conn.y / 2 + 1.5, 0, 1.75]) cube([3, fpc_chan.x, 3.5], center = true);
+      fpc_crease_room(az, z0, h);
+    }
+    hull() {
+      fpc_crease_room(az, z0, h);
+      translate(fpc_mouth(az)) rotate(fpc_ang(az)) translate([0, -fpc_chan.x / 2, z0 - fpc_z]) cube([1, fpc_chan.x, h]);
     }
   }
   for (p = base_screws) translate([p.x, p.y, base_top - eps]) cylinder(d = pcb_screw_d, h = base_screw_depth, $fn = 16);
 }
 
-// FPC connectors on the base PCB (mouth facing out, at the ribbon), visual only
+// room for a ribbon's crease, as wide as the ribbon is long there
+module fpc_crease_room(az, z0, h) {
+  c = fpc_crease(az);
+  translate([c.x, c.y, z0]) rotate(az - 90) translate([-(fpc_chan.x + 1) / 2, -(fpc_chan.x + 1) / 2, 0])
+    cube([fpc_chan.x + 1, fpc_chan.x + 1, h]);
+}
+
+// FPC connectors on the base PCB (mouth facing the ribbon), visual only
 module base_fpc_conns() {
   for (az = sensor_az_) color("ivory") translate(fpc_foot(az)) rotate(fpc_ang(az))
     translate([-fpc_conn.y / 2, -fpc_conn.x / 2, 0]) cube([fpc_conn.y, fpc_conn.x, fpc_conn.z]);
@@ -486,20 +540,18 @@ module ribbons() { for (az = sensor_az_) color("goldenrod") ribbon(az); }
 // one ribbon's path, as a strip w wide and t thick (thicker, it checks
 // there's room to pull the ribbon through: see fpc_clear)
 module ribbon(az, t = 0.1, w = fpc_w) {
-  // into the mouth at the board's up-slope edge, round the U-turn, back
-  // over the connector and up over the chip
-  path = [[sc - pcb_end + 1.5, 0, pcb_top_z + 0.9], [sc - pcb_end - 0.6, 0, pcb_top_z + 0.9],
-          [sc - pcb_end - fpc_bend / 2, 0, pcb_top_z + 1.6], [sc - pcb_end - 0.6, 0, pcb_top_z + fpc_conn.z + 0.3],
-          [sc - pcb_end + fpc_conn.y, 0, pcb_top_z + fpc_conn.z + 0.3],
-          [sc - pcb_end + fpc_conn.y + 1.5, 0, pcb_top_z + parts_h + 0.25], fpc_top(az)];
+  path = fpc_path(az);
   for (i = [0 : len(path) - 2])
     hull() at_ball(az, sensor_el_) for (p = [path[i], path[i + 1]]) translate(p) cube([t, w, t], center = true);
+  // in to the crease, still across the slope; then along to the mouth
+  c = fpc_crease(az);
   hull() {
     at_ball(az, sensor_el_) translate(fpc_top(az)) cube([t, w, t], center = true);
-    translate(fpc_foot(az)) rotate(fpc_ang(az)) translate([fpc_conn.y / 2 + 0.8, 0, 1]) cube([t, w, t], center = true);
+    translate(c) rotate(az - 90) cube([t, w, t], center = true);
   }
-  hull() translate(fpc_foot(az)) rotate(fpc_ang(az)) for (x = [fpc_conn.y / 2 + 0.8, fpc_conn.y / 2 - 1.5])
-    translate([x, 0, 1]) cube([t, w, t], center = true);
+  m = fpc_mouth(az);
+  hull() for (p = [c, m - 1.5 * [cos(fpc_ang(az)), sin(fpc_ang(az)), 0]])
+    translate(p) rotate(fpc_ang(az)) cube([t, w, t], center = true);
 }
 
 // ---------- body ----------
@@ -692,7 +744,7 @@ echo(str("EXPLODED {\"sensor\": ", [for (az = sensor_az_) at_ball_m(az, sensor_e
 // x down the slope, y towards increasing azimuth)
 echo(str("KICAD {\"xiao_center\": ", at_elec_pt([0.3 + usb_overhang + xiao.x / 2, elec_size.y / 2, 0]),
          ", \"screws\": ", base_screws,
-         ", \"fpc\": ", [for (az = sensor_az_) [fpc_foot(az), fpc_ang(az)]],
+         ", \"fpc\": ", [for (az = sensor_az_) [fpc_foot(az), fpc_ang(az), fpc_e(az)]],
          ", \"sensor_az\": ", sensor_az_,
          ", \"sensor\": {\"sc\": ", sc, ", \"pcb_end\": ", pcb_end, ", \"pcb_w\": ", pcb_w, ", \"pcb_h\": ", pcb_h,
          ", \"ear\": ", [sc, pcb_screw_side * pcb_screw_y], ", \"chip_x\": ", [sc - chip_in.x / 2, sc + chip_in.x / 2],

@@ -73,8 +73,8 @@ four M2 screws.
 - Seeed XIAO nRF52840 soldered **upside down** by its castellated edges: its
   parts (USB-C included) hang through the cutout into a pocket in the cover;
   its battery pads face up, and the LiPo's leads solder straight onto them
-- J1 (right sensor) and J2 (left) at the band's ends, mouths facing out, in
-  line with the sensors, so the ribbons run down flat
+- J1 (right sensor) and J2 (left) at the band's ends, along it, mouths facing
+  the ribbons coming along the channel in the case's underside
 - TP1-TP3: optional buttons (left, middle, right click) to TP4 (GND)
 - the ROLLINO logo is bare copper (no solder mask) on the back of the band
 - pins as in the firmware (`zmk/boards/shields/rollino/rollino.overlay`)
@@ -82,11 +82,15 @@ four M2 screws.
 Ribbons
 -------
 
-Two 6-way 0.5 mm FFCs, 40 mm long (the model's path is about 37 mm, into
-both connectors; the channel takes a little slack). J1 pin 1 (+3V3) has to reach
-pin 1 at the other end: check against the connectors' datasheet whether that
-needs a same-side (type A) or opposite-side (type B) contact cable before
-ordering.
+Two 6-way 0.5 mm FFCs, 50 mm long (the stock length: 40 mm ones are hard
+to find), with opposite-side (type B) contacts. Each comes down from its
+sensor pod under the band's old end, turns in, and with one crease (about
+45 degrees, folded flat) lies along a channel in the case's underside,
+straight into the base board's connector at the end of the band; the case
+model sets where that is from the cable's length (`fpc_len`). The crease
+turns the ribbon over, hence type B. The pins at each end are numbered from
+the ribbon's path so that each signal meets itself: put the ribbon in, fold
+it at the crease and lay it in its channel before the base board goes up.
 
 Parts
 -----

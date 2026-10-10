@@ -23,6 +23,7 @@ it, held by the same screws.
   and routed boards, generated from the case model (see [pcb/readme.md](pcb/readme.md)).
 
 ![The PCBs, top and bottom](pcb/renders/pcbs.png)
+- [parts.md](parts.md) - everything to order for one Rollino.
 - `datasheets/` - component datasheets. The PMW3610 datasheet is available
   [here](https://www.epsglobal.com/Media-Library/EPSGlobal/Products/files/pixart/PMW3610DM-SUDU.pdf?ext=.pdf).
 
