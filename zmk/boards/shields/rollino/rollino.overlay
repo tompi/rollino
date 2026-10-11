@@ -3,14 +3,20 @@
  * motion and twist scrolling by rollino,ball-fusion.
  *
  * XIAO pins:
- *   D8  (P1.13)  SPI SCK            both sensors' SCLK
- *   D10 (P1.15)  SPI MOSI + MISO    both sensors' SDIO (3-wire: same pin)
+ *   D4  (P0.04)  SPI SCK            both sensors' SCLK
+ *   D5  (P0.05)  SPI MOSI + MISO    both sensors' SDIO (3-wire: same pin)
  *   D7  (P1.12)  CS right sensor    NCS
  *   D6  (P1.11)  CS left sensor     NCS
- *   D3  (P0.29)  right sensor MOTION
+ *   D8  (P1.13)  right sensor MOTION
  *   D2  (P0.28)  left sensor MOTION
- *   D0, D1, D9   optional buttons (left, right, middle click), to GND
- *   D4, D5       free
+ *   D0, D1, D9   optional buttons (left, middle, right click), to GND
+ *   D3, D10      free
+ *
+ * The bus is on D4 and D5 because they are the XIAO's only pins that Nordic
+ * doesn't keep for low frequencies (under 10 kHz: the others are by the
+ * radio, and a 2 MHz clock on them can cost it some sensitivity). On the
+ * base PCB each sensor's own lines and each button are on the pins of their
+ * side.
  */
 
 #include <zephyr/dt-bindings/input/input-event-codes.h>
@@ -18,20 +24,25 @@
 &pinctrl {
     spi2_default: spi2_default {
         group1 {
-            psels = <NRF_PSEL(SPIM_SCK, 1, 13)>,
-                <NRF_PSEL(SPIM_MOSI, 1, 15)>,
-                <NRF_PSEL(SPIM_MISO, 1, 15)>;
+            psels = <NRF_PSEL(SPIM_SCK, 0, 4)>,
+                <NRF_PSEL(SPIM_MOSI, 0, 5)>,
+                <NRF_PSEL(SPIM_MISO, 0, 5)>;
         };
     };
 
     spi2_sleep: spi2_sleep {
         group1 {
-            psels = <NRF_PSEL(SPIM_SCK, 1, 13)>,
-                <NRF_PSEL(SPIM_MOSI, 1, 15)>,
-                <NRF_PSEL(SPIM_MISO, 1, 15)>;
+            psels = <NRF_PSEL(SPIM_SCK, 0, 4)>,
+                <NRF_PSEL(SPIM_MOSI, 0, 5)>,
+                <NRF_PSEL(SPIM_MISO, 0, 5)>;
             low-power-enable;
         };
     };
+};
+
+/* D4 and D5 are the XIAO's I2C pins by default */
+&xiao_i2c {
+    status = "disabled";
 };
 
 &xiao_spi {
@@ -46,7 +57,7 @@
         compatible = "pixart,pmw3610";
         reg = <0>;
         spi-max-frequency = <2000000>;
-        motion-gpios = <&xiao_d 3 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
+        motion-gpios = <&xiao_d 8 (GPIO_ACTIVE_LOW | GPIO_PULL_UP)>;
         zephyr,axis-x = <INPUT_REL_X>;
         zephyr,axis-y = <INPUT_REL_Y>;
         res-cpi = <800>;
@@ -70,7 +81,8 @@
         zmk,kscan = &kscan0;
     };
 
-    /* optional buttons; with none fitted the pins just idle high */
+    /* optional buttons (left, middle, right); with none fitted the pins
+     * just idle high */
     kscan0: kscan {
         compatible = "zmk,kscan-gpio-direct";
         wakeup-source;
@@ -92,15 +104,15 @@
 
         right {
             device = <&sensor_right>;
-            azimuth = <129810>;
-            elevation = <(-23000)>;
+            azimuth = <130303>;
+            elevation = <(-22000)>;
             rotation = <0>;
         };
 
         left {
             device = <&sensor_left>;
-            azimuth = <(-129810)>;
-            elevation = <(-23000)>;
+            azimuth = <(-130303)>;
+            elevation = <(-22000)>;
             rotation = <0>;
         };
     };

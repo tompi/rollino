@@ -29,7 +29,9 @@ Electronics
 | 2 | 6-way FFC, 0.5 mm pitch, 50 mm, **opposite-side (type B) contacts** | sensor to base | for 0.3 mm thick FPC connectors (FH12); 50 mm is the stock length |
 | 1 | LiPo 602020, about 200 mAh, with protection board | on the XIAO's back | up to 22 x 20 x 6.5 mm; leads solder to the XIAO's battery pads |
 
-Passives, all 0603, for both sensor boards together (10 V or more):
+Passives, all 0603, for both sensor boards together (10 V or more; the 10 uF
+X7R is the scarce one, for instance Murata GRM188Z71A106KA73D, and 6.3 V
+will do for it: PixArt asks for 6.3 to 16 V, 10 %):
 
 | Qty | Value | Where (on each sensor board) |
 |-----|-------|------------------------------|

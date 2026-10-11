@@ -4,8 +4,9 @@ same board) and the base board, each with its schematic.
 
 Board outlines and the positions of everything the case cares about (the
 XIAO, the FPC connectors, the screws) come from the case model, so run this
-again after changing case/rollino.scad. The boards come out placed but not
-routed.
+again after changing case/rollino.scad. The boards come out placed, with the
+tracks that matter laid (and locked), but not otherwise routed: route.py does
+that.
 
 Run it with KiCad's own Python (it needs pcbnew), from anywhere:
 
@@ -238,7 +239,9 @@ def write_models():
         face = []
         for k in range(3):
             mx, my, mz = v[3 + 3 * k:6 + 3 * k]
-            p = (round(my, 3), round(mx - 10.475, 3), round(1.0 - mz, 3))
+            # (turned over about its long axis: the footprint's y is down, so
+            # that's -my, not a mirror image of the board)
+            p = (round(-my, 3), round(mx - 10.475, 3), round(1.0 - mz, 3))
             if p not in index:
                 index[p] = len(points)
                 points.append(p)
@@ -517,6 +520,44 @@ class Board:
             t.SetLocked(True)
             self.board.Add(t)
 
+    def via(self, net, at):
+        """A locked via at at (board mm), which route.py keeps."""
+        v = pcbnew.PCB_VIA(self.board)
+        v.SetPosition(self.p(*at))
+        v.SetViaType(pcbnew.VIATYPE_THROUGH)
+        v.SetLayerPair(pcbnew.F_Cu, pcbnew.B_Cu)
+        v.SetWidth(pcbnew.FromMM(0.6))
+        v.SetDrill(pcbnew.FromMM(0.3))
+        v.SetNet(self.net(net))
+        v.SetLocked(True)
+        self.board.Add(v)
+
+    def keepout(self, name, pts, layers=(pcbnew.F_Cu, pcbnew.B_Cu), tracks=False, vias=False, pour=False):
+        """A rule area (board mm) that keeps tracks, vias and/or the pours out."""
+        z = pcbnew.ZONE(self.board)
+        z.SetIsRuleArea(True)
+        z.SetZoneName(name)
+        z.SetDoNotAllowTracks(tracks)
+        z.SetDoNotAllowVias(vias)
+        z.SetDoNotAllowCopperPour(pour)
+        z.SetDoNotAllowPads(False)
+        z.SetDoNotAllowFootprints(False)
+        ls = pcbnew.LSET(layers[0])
+        for layer in layers[1:]:
+            ls.AddLayer(layer)
+        z.SetLayerSet(ls)
+        o = z.Outline()
+        o.NewOutline()
+        for x, y in pts:
+            o.Append(self.p(x, y))
+        self.board.Add(z)
+
+    def pads(self, fp):
+        """A footprint's pads as [(number, net name, (x, y))], board mm."""
+        return [(pad.GetNumber(), pad.GetNetname(),
+                 (pcbnew.ToMM(pad.GetPosition().x) - self.origin[0], pcbnew.ToMM(pad.GetPosition().y) - self.origin[1]))
+                for pad in fp.Pads()]
+
     def text(self, s, at, size=1.0, layer=pcbnew.F_SilkS, angle=0, thickness=0.15):
         t = pcbnew.PCB_TEXT(self.board)
         t.SetText(s)
@@ -590,6 +631,16 @@ def sensor(geo, symlib):
 
     C0603 = "Capacitor_SMD:C_0603_1608Metric"
     R0603 = "Resistor_SMD:R_0603_1608Metric"
+
+    def pin(n):
+        """U1's pin n on the board (datasheet fig. 5): 1 to 8 along the ear's
+        side, 9 to 16 back along the other."""
+        return (3.18 - 1.78 * (n - 1), -5.35) if n <= 8 else (1.78 * (n - 9) - 10.17, 5.35)
+
+    # the rows of parts either side of the chip, how far a capacitor's pads
+    # are from its middle, and where along their rows C3, C8, C9 and C4 go
+    TOP, BOT, PAD = -7.4, 8.1, 0.775
+    c3, c8, c9, c4 = -8.7, -5.7, -2.7, (pin(12)[0] + pin(13)[0]) / 2
     parts = [
         # ref, lib_id, value, footprint, schematic position, pins, board position, rotation
         ("U1", "rollino:PMW3610DM-SUDU", "PMW3610DM-SUDU", "rollino:PMW3610DM-SUDU", (135, 115),
@@ -603,17 +654,22 @@ def sensor(geo, symlib):
         # mouth facing off the up-slope edge, 0.5 mm in from it, where the
         # ribbon is easy to push in and latch
         ("J1", FPC_SYMBOL, FPC_VALUE, FPC_FP, (60, 110), fpc_pins(270, (0, 1), {}), (s["sc"] - s["pcb_end"] + 0.5 + FPC_MOUTH, 0), 270),
-        ("R1", "Device:R", "10k", R0603, (215, 50), {"1": "+3V3", "2": "NRESET"}, (-8.0, -7.4), 0),
-        ("C3", "Device:C", "100nF", C0603, (80, 50), {"1": "+3V3", "2": "GND"}, (-11.0, -7.4), 0),
-        # upright on the other side, by the pins they serve
-        ("C6", "Device:C", "10uF X7R", C0603, (200, 100), {"1": "VCP", "2": "GND"}, (-12.0, 8.1), 90),
-        ("C7", "Device:C", "10nF X7R", C0603, (215, 100), {"1": "VCP", "2": "GND"}, (-10.0, 8.1), 90),
-        ("C5", "Device:C", "10nF", C0603, (215, 135), {"1": "VCSEL+", "2": "GND"}, (-8.0, 8.1), 90),
-        ("C4", "Device:C", "100nF X7R", C0603, (200, 135), {"1": "CP", "2": "CN"}, (-4.0, 8.1), 90),
-        ("C1", "Device:C", "3.3uF", C0603, (150, 50), {"1": "+1V8", "2": "GND"}, (-2.0, 8.1), 90),
-        ("C2", "Device:C", "100nF", C0603, (162, 50), {"1": "+1V8", "2": "GND"}, (0.0, 8.1), 90),
-        ("C9", "Device:C", "1uF", C0603, (174, 50), {"1": "+1V8", "2": "GND"}, (2.0, 8.1), 90),
-        ("C8", "Device:C", "1uF", C0603, (92, 50), {"1": "+3V3", "2": "GND"}, (-6.0, 8.1), 90),
+        # upright at the row's end, out of the way of the tracks to the pins
+        ("R1", "Device:R", "10k", R0603, (215, 50), {"1": "+3V3", "2": "NRESET"}, (-11.4, -8.0), 270),
+        # VDDIO's capacitors by pin 6 (C8 is the regulator's input capacitor
+        # too), and the regulator's output capacitor against its pin
+        ("C3", "Device:C", "100nF", C0603, (80, 50), {"1": "+3V3", "2": "GND"}, (c3, TOP), 180),
+        ("C8", "Device:C", "1uF", C0603, (92, 50), {"1": "+3V3", "2": "GND"}, (c8, TOP), 0),
+        ("C9", "Device:C", "1uF", C0603, (174, 50), {"1": "+1V8", "2": "GND"}, (c9, TOP), 180),
+        # on the other side each is upright under the pin it serves, that pad
+        # towards the pin and its ground along the board's edge
+        ("C6", "Device:C", "10uF X7R", C0603, (200, 100), {"1": "VCP", "2": "GND"}, (-12.0, BOT), 270),
+        ("C7", "Device:C", "10nF X7R", C0603, (215, 100), {"1": "VCP", "2": "GND"}, (pin(9)[0], BOT), 270),
+        ("C5", "Device:C", "10nF", C0603, (215, 135), {"1": "VCSEL+", "2": "GND"}, (pin(10)[0], BOT), 270),
+        # (lying under the charge pump's two pins, a pad under each)
+        ("C4", "Device:C", "100nF X7R", C0603, (200, 135), {"1": "CP", "2": "CN"}, (c4, -TOP), 0),
+        ("C2", "Device:C", "100nF", C0603, (162, 50), {"1": "+1V8", "2": "GND"}, (pin(14)[0], BOT), 270),
+        ("C1", "Device:C", "3.3uF", C0603, (150, 50), {"1": "+1V8", "2": "GND"}, (0.5, BOT), 270),
     ]
     for ref, lib_id, value, fp, at, pins, bat, brot in parts:
         text = symlib.get(lib_id)
@@ -625,6 +681,46 @@ def sensor(geo, symlib):
     # won't use
     ux, uy = 0.9, -8.35
     b.track("+3V3", [(ux + 1.1375, uy - 0.95), (ux, uy - 0.95), (ux, uy + 0.95), (ux + 1.1375, uy + 0.95)])
+
+    # The tracks that matter are laid here (locked: route.py keeps them) and
+    # Freerouting does the rest. PixArt wants CP, CN and VCP's under 5 mm
+    # long and over 20 mil wide: straight from each pin to its capacitor
+    b.track("VCP", [pin(9), (pin(9)[0], BOT - PAD), (-12.0, BOT - PAD)], 0.6)
+    b.track("CP", [pin(12), (pin(12)[0], 6.7), (c4 - PAD, -TOP)], 0.6)
+    b.track("CN", [pin(13), (pin(13)[0], 6.7), (c4 + PAD, -TOP)], 0.6)
+    b.track("VCSEL+", [pin(10), (pin(10)[0], BOT - PAD)], 0.5)
+    b.track("VCSEL-", [pin(15), pin(16)], 0.5)
+    # VDD's capacitors and a test pad
+    b.track("+1V8", [pin(14), (pin(14)[0], BOT - PAD), (0.5, BOT - PAD), (2.4, BOT - PAD), (2.4, 7.75)], 0.5)
+    # ground: from pin 11 past a test pad to a rail along the capacitors'
+    # outer pads, with vias to the pour on the back
+    gy = BOT + PAD
+    b.track("GND", [pin(11), (pin(11)[0], gy)], 0.5)
+    b.track("GND", [(-12.0, gy), (1.45, gy)], 0.4)
+    for x in (-11.085, -9.28, -7.45, -2.2, -0.385, 1.45):
+        b.via("GND", (x, gy))
+    # 3.3 V: C3 and C8 to VDDIO (pin 6), and on round the row's far side,
+    # between the regulator's pins 4 and 5, to its VIN-EN track
+    b.track("+3V3", [(c3 + PAD, TOP), (c8 - PAD, TOP), (pin(6)[0], -6.45), pin(6)], 0.4)
+    b.track("+3V3", [(c8 - PAD, TOP), (c8 - PAD, uy), (ux, uy)], 0.3)
+    # 1.8 V: the regulator's output to C9 beside it, then on the back round
+    # the lens cutout's short end to VDD (pin 14), keeping to the edge of the
+    # pour rather than cutting it up
+    b.track("+1V8", [(c9 + PAD, TOP), (ux - 1.1375, TOP)], 0.5)
+    b.via("+1V8", (-1.19, TOP))
+    b.track("+1V8", [(-1.19, TOP), (-0.89, -7.1), (4.9, -7.1), (6.5, -5.0), (6.5, 5.0), (5.2, 6.6),
+                     (pin(14)[0], 6.6), pin(14)], 0.3, pcbnew.B_Cu)
+    # the top row's grounds, each with a via beside it
+    for pts in ([(c8 + PAD, TOP), (-4.2, TOP), (c9 - PAD, TOP)], [(c3 - PAD, TOP), (-10.3, TOP)],
+                [(ux + 1.1375, uy), (3.3, uy)]):
+        b.track("GND", pts, 0.4)
+    for at in ((-4.2, TOP), (-10.3, TOP), (3.3, uy)):
+        b.via("GND", at)
+    # test pads for bringing a board up (on the fab layer: +1V8, GND)
+    for i, (net, at) in enumerate([("+1V8", (2.4, 7.75)), ("GND", (pin(11)[0], 7.75))]):
+        ref = "TP%d" % (i + 1)
+        u = sch.symbol(ref, "Connector:TestPoint", net, "TestPoint:TestPoint_Pad_D1.0mm", (245, 100 + 35 * i), {"1": net}, bom=False)
+        b.footprint("TestPoint:TestPoint_Pad_D1.0mm", ref, net, at, 0, {"1": net}, u, fab_ref=True)
     u = sch.symbol("H1", "Mechanical:MountingHole", "M2", "MountingHole:MountingHole_2.2mm_M2", (230, 50), {}, bom=False)
     b.footprint("MountingHole:MountingHole_2.2mm_M2", "H1", "M2", (s["ear"][0], -s["ear"][1]), sym_uuid=u)
     sch.flag("+3V3", (40, 30))
@@ -655,14 +751,47 @@ def base(geo, symlib):
     def kp(w):  # world x/y -> board coordinates
         return (w[0], -w[1])
 
-    xiao_pins = {"1": "BTN_L", "2": "BTN_R", "3": "MOTION_L", "4": "MOTION_R", "5": None, "6": None,
-                 "7": "NCS_L", "8": "NCS_R", "9": "SCLK", "10": "BTN_M", "11": "SDIO",
+    # The bus is on D4 and D5, the only pins of the XIAO's that Nordic doesn't
+    # keep for low frequencies (they are away from the radio), and each
+    # sensor's own lines and the buttons are on the pins of their side, so
+    # only the bus and the supply cross from one side to the other
+    xiao_pins = {"1": "BTN_L", "2": "BTN_M", "3": "MOTION_L", "4": None, "5": "SCLK", "6": "SDIO",
+                 "7": "NCS_L", "8": "NCS_R", "9": "MOTION_R", "10": "BTN_R", "11": None,
                  "12": "+3V3", "13": "GND", "14": None}
     u = sch.symbol("U1", "rollino:XIAO_nRF52840", "XIAO nRF52840", "rollino:XIAO_nRF52840_upside_down",
                    (110, 95), xiao_pins, text=symlib["rollino:XIAO_nRF52840"])
     # USB end towards the front (board +y): the footprint's -y turned round
-    b.footprint("rollino:XIAO_nRF52840_upside_down", "U1", "XIAO nRF52840", kp(pos["xiao_center"]), 180, xiao_pins, u,
-                Schematic.pin_names(symlib["rollino:XIAO_nRF52840"]))
+    xiao = b.footprint("rollino:XIAO_nRF52840_upside_down", "U1", "XIAO nRF52840", kp(pos["xiao_center"]), 180, xiao_pins, u,
+                       Schematic.pin_names(symlib["rollino:XIAO_nRF52840"]))
+    # The XIAO's chip antenna is at its far end, in the notch, a fraction of
+    # a millimetre from this board: no pour near it (the strip of board
+    # between the notch and the ball's hole, and beside the XIAO's last few
+    # millimetres), and the tracks that have to cross that strip keep a
+    # millimetre from the notch
+    end = kp(pos["xiao_center"])[1] - 20.95 / 2
+    b.keepout("antenna", [(-12, end - 7.2), (12, end - 7.2), (12, end + 4.3), (-12, end + 4.3)], pour=True)
+    b.keepout("antenna", [(-10, end - 1.0), (10, end - 1.0), (10, end + 1.9), (-10, end + 1.9)], tracks=True, vias=True, pour=True)
+    # With no pour on that strip, nothing but tracks joins the board's two
+    # halves: the supply's are laid here rather than left to Freerouting.
+    # Each goes from the XIAO's pad to a via beside it, up the right side on
+    # the back, across the strip beside the keepout and down the left side.
+    # The left half has no ground pad but the connector's, far up the band:
+    # its pours hang on this ground track, which runs on down past the XIAO
+    # with vias between the rows of pads
+    # (how far out each runs down the sides and how far in it turns at 45
+    # degrees on to its way across, where that is, and where it ends)
+    def between(row):
+        """y midway between the XIAO's rows of pads row and row + 1 (from this end)."""
+        return end + 2.78 + 2.54 * (row - 0.5)
+
+    for net, x, xi, lane, down in (("GND", 11.2, 10.4, end - 1.3, between(6)), ("+3V3", 12.0, 10.6, end - 1.9, between(3))):
+        pad = next(at for num, name, at in b.pads(xiao) if name == net)
+        b.track(net, [pad, (x, pad[1])], 0.3)
+        b.track(net, [(x, pad[1]), (x, lane + x - xi), (xi, lane), (-xi, lane), (-x, lane + x - xi), (-x, down)],
+                0.3, pcbnew.B_Cu)
+        b.via(net, (x, pad[1]))
+    for row in (2, 4, 6):
+        b.via("GND", (-11.2, between(row)))
 
     # FPC connectors at the band's ends, along it, mouths facing the ribbons;
     # right sensor first
@@ -676,7 +805,34 @@ def base(geo, symlib):
         mid = (FPC_TAIL + FPC_MOUTH) / 2
         fx, fy = kp(foot)
         # (its reference would hang over the band's edge: the label names it)
-        b.footprint(FPC_FP, ref, FPC_VALUE, (fx - mid * ux, fy - mid * uy), rot, pins, u, fab_ref=True)
+        fp = b.footprint(FPC_FP, ref, FPC_VALUE, (fx - mid * ux, fy - mid * uy), rot, pins, u, fab_ref=True)
+        # A track out of each pad's tail, fanned out to twice the pads' pitch
+        # (the outer ones turning first). Freerouting can't start a track
+        # from pads this close at an odd angle, and left this connector
+        # unconnected: route.py has it join these up instead. They run
+        # along the board's nearest axis (10 degrees off the pads') and turn
+        # at 45, as its own tracks do
+        tails = [(num, at) for num, net, at in b.pads(fp) if num != "MP"]
+        ax, ay = (0, -math.copysign(1, uy)) if abs(uy) > abs(ux) else (-math.copysign(1, ux), 0)
+        cx, cy = (sum(at[k] for num, at in tails) / len(tails) for k in (0, 1))
+        for num, (px, py) in tails:
+            # from just inside the pad's end; s across the fan, t along it
+            px, py = px - 0.45 * ux, py - 0.45 * uy
+            s = (px - cx) * -ay + (py - cy) * ax
+            t0 = (px - cx) * ax + (py - cy) * ay
+            turn = 2.1 - 0.6 * abs(s)                    # about 1.8, 1.5 and 1.2 down
+            # (ground's ends at a via into the back's pour: by the left
+            # connector that's further on, past the logo, which has none)
+            far = 8.6 if pins[num] == "GND" and side == "L" else 3.3
+            pts = [(cx - s * k * ay + t * ax, cy + s * k * ax + t * ay)
+                   for k, t in ((1, t0), (1, turn), (2, turn + abs(s)), (2, far))]
+            b.track(pins[num], pts)
+            if pins[num] == "GND":
+                b.via("GND", pts[-1])
+        # and a via for the connector's tabs: beside the one by the ball's hole
+        tab = min((at for num, net, at in b.pads(fp) if num == "MP"), key=lambda at: math.hypot(*at))
+        b.track("GND", [tab, (tab[0] + 1.75 * ax, tab[1] + 1.75 * ay)], 0.3)
+        b.via("GND", (tab[0] + 1.75 * ax, tab[1] + 1.75 * ay))
         # its label on the band, a little way round towards the front
         az = math.atan2(foot[0], -foot[1])
         az -= math.copysign(math.radians(15), az)
@@ -698,7 +854,7 @@ def base(geo, symlib):
     sch.flag("GND", (40, 30))
     sch.text("XIAO pins as in zmk/boards/shields/rollino/rollino.overlay; NCS/MOTION _R = right sensor (J1), _L = left (J2)", (25, 175))
     sch.text("J1/J2 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - or reversed, so each signal meets itself through the ribbon", (25, 181))
-    sch.text("SDIO goes to both SPI MOSI (D10) and MISO: the firmware puts them on the same pin", (25, 187))
+    sch.text("SDIO goes to both SPI MOSI (D5) and MISO: the firmware puts them on the same pin", (25, 187))
     sch.write(os.path.join(d, name + ".kicad_sch"))
     # the logo in bare copper on the back of the band's left side, clear of
     # the screw hole below it; route.py keeps the tracks out of its way

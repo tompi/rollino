@@ -31,8 +31,9 @@ Firmware
 --------
 
 ZMK, built by GitHub Actions on every push (download `firmware.zip` from the
-run, then double-tap the XIAO's reset and copy the `.uf2` onto it). It's a
-standalone Bluetooth/USB mouse.
+run, then double-tap the XIAO's reset and copy the `.uf2` onto it: its
+button faces down, and the cover has a hole under it for a paper clip). It's
+a standalone Bluetooth/USB mouse.
 
 - `zmk/boards/shields/rollino/` - the shield: pins, the two PMW3610 sensors
   (Zephyr's driver), three optional buttons.
@@ -40,18 +41,18 @@ standalone Bluetooth/USB mouse.
   ball's surface sliding past in its own tilted plane; together they give the
   ball's whole rotation. Rolling moves the pointer (as if the finger on top
   dragged it), twisting about the vertical axis scrolls.
-- `config/rollino.keymap` - the buttons: left, right, middle click.
+- `config/rollino.keymap` - the buttons: left, middle, right click.
 
 | XIAO pin | Use |
 |----------|-----|
-| D8 | SCLK, both sensors |
-| D10 | SDIO, both sensors (SPI MOSI and MISO on the same pin) |
+| D4 | SCLK, both sensors |
+| D5 | SDIO, both sensors (SPI MOSI and MISO on the same pin) |
 | D7 | NCS, right sensor |
 | D6 | NCS, left sensor |
-| D3 | MOTION, right sensor |
+| D8 | MOTION, right sensor |
 | D2 | MOTION, left sensor |
-| D0, D1, D9 | optional buttons to GND: left, right, middle click |
-| D4, D5 | free |
+| D0, D1, D9 | optional buttons to GND: left, middle, right click |
+| D3, D10 | free |
 
 **Calibrating the sensors' orientation.** The fusion needs to know which way
 each sensor's X axis points (`rotation` in the shield's `ball_fusion` node,

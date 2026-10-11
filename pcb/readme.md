@@ -12,20 +12,27 @@ Java, Blender 3.x and ImageMagick for routing and rendering):
 
 ```
 PY=/Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
-$PY pcb/gen/generate.py     # schematics, footprints placed on their nets
-$PY pcb/gen/route.py        # Freerouting routes every net, GND poured on both layers
+$PY pcb/gen/generate.py     # schematics, footprints placed on their nets, the tracks that matter laid
+$PY pcb/gen/route.py        # Freerouting routes the rest, GND poured on both layers and stitched
 pcb/gen/render_pcbs.sh      # the renders above, the layout images and schematic PDFs
 ```
 
 They overwrite the projects, so make changes in the scripts rather than the
 KiCad files, or stop using them once you start editing the boards by hand.
 
-Both boards are routed (0.2 mm tracks, 0.15 mm clearance, 0.3 mm from the
-edges, 0.6/0.3 mm vias) and pass DRC with nothing to report, warnings
-included (`kicad-cli pcb drc --schematic-parity --severity-all`); the
-schematics pass ERC. The sensor board's references are on its fab layer
-only, as are the base board's test points' (their labels name them): the
-silkscreen has no room for them.
+Both boards are routed (0.2 mm tracks, wider where it matters, 0.15 mm
+clearance, 0.3 mm from the edges, 0.6/0.3 mm vias) and pass DRC with nothing
+to report, warnings included (`kicad-cli pcb drc --schematic-parity
+--severity-all`); the schematics pass ERC. `route.py` checks that itself: it
+only saves a board with nothing left unconnected and nothing for the DRC to
+report, and fails otherwise. The sensor board's references are on its fab
+layer only, as are the base board's test points' (their labels name them):
+the silkscreen has no room for them.
+
+Freerouting 1.5 can't start a track from the base board's FPC connectors
+(their pads are 10 degrees off the board's axes) and would leave them
+unconnected, so `generate.py` lays a short track out of each pad and
+`route.py` has Freerouting join those up instead.
 
 Sensor board (`sensor/`, two needed)
 --------------------------------------
@@ -44,6 +51,15 @@ outline, ear included.
 - TPS7A0518 1.8 V LDO for the sensor's core: 1 uA quiescent, instead of the
   ~34 uA of the TLV74318 used there, which would otherwise draw more than the
   resting sensor
+- each capacitor is by the pin it serves, on a short wide track laid by
+  `generate.py`: C4 under the charge pump's two pins and C6/C7 under VCP's
+  (PixArt asks for those tracks to be under 5 mm long and over 20 mil wide:
+  they are 2 to 4 mm and 0.6 mm), C5 under the laser's, C2/C1 under VDD's,
+  C8/C3 by VDDIO's and C9 against the regulator's output; their grounds are
+  a rail from pin 11 with vias to the pour on the back
+- 1.8 V goes from the regulator to VDD on the back, round the lens cutout's
+  short end
+- TP1 (+1V8) and TP2 (GND): pads for a meter when bringing a board up
 - FH12-6S-0.5SH FPC connector at the board's up-slope end, mouth facing off
   the edge, so the ribbon is easy to push in and latch before the board goes
   into its pod; the ribbon then bends back over the connector and runs over
@@ -77,7 +93,16 @@ four M2 screws.
   the ribbons coming along the channel in the case's underside
 - TP1-TP3: optional buttons (left, middle, right click) to TP4 (GND)
 - the ROLLINO logo is bare copper (no solder mask) on the back of the band
-- pins as in the firmware (`zmk/boards/shields/rollino/rollino.overlay`)
+- the XIAO's chip antenna is at its far end, inside the notch and a fraction
+  of a millimetre from this board: the pours stay off the strip between the
+  notch and the ball's hole and away from the XIAO's last few millimetres,
+  and the four tracks that have to cross that strip (the bus and the supply,
+  to the left sensor) keep a millimetre from the notch; the supply's two,
+  the only thing joining the two halves' ground, are laid by `generate.py`
+  on the back
+- pins as in the firmware (`zmk/boards/shields/rollino/rollino.overlay`): the
+  bus on D4/D5, the XIAO's only pins that aren't next to its radio, and each
+  sensor's own lines and each button on the pins of their side
 
 Ribbons
 -------

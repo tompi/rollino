@@ -136,6 +136,12 @@ xiao = [21, 17.8, 1];
 // component side, and how far it overhangs the board edge
 xiao_parts_h = 3.3;
 usb_overhang = 1.55;
+// the XIAO's reset button, on its component side (so facing down, into the
+// cover): [from the board edge at the USB end, from the centre line] in
+// Seeed's model; the cover has a hole under it this wide, for a paper clip
+// (two taps for the bootloader)
+xiao_reset = [1.87, -5.72];
+reset_hole_d = 2.2;
 // pads on the XIAO's underside, and the gap between them and the cell
 xiao_pads = 0.25;
 batt_gap = 0.5;
@@ -479,8 +485,8 @@ module base_pcb_2d() {
 module base_pcb() { color("darkgreen") translate([0, 0, floor_z + base_cover_t]) linear_extrude(base_pcb_t) base_pcb_2d(); }
 
 // the cover: the case's outer cut off at base_cover_t, with the ball's hole,
-// the USB plug's recess, a pocket for the XIAO's parts and the screws'
-// countersunk holes
+// the USB plug's recess, a pocket for the XIAO's parts, a hole under its
+// reset button and the screws' countersunk holes
 module base_cover() {
   difference() {
     intersection() {
@@ -490,6 +496,9 @@ module base_cover() {
     ball_cuts();
     usb_recess();
     xiao_cutout(xiao_parts_h - base_pcb_t + 0.2 + eps, xiao_parts_h - base_pcb_t + 0.2);
+    // (the model lies upside down: see electronics())
+    at_elec() translate([0.3 + usb_overhang + xiao_reset.x, elec_size.y / 2 - xiao_reset.y, -elec_floor - 1])
+      cylinder(d = reset_hole_d, h = elec_floor + 1, $fn = 24);
     for (p = base_screws) translate([p.x, p.y, floor_z]) {
       translate([0, 0, -1]) cylinder(d = 2.4, h = base_cover_t + 2, $fn = 16);
       translate([0, 0, -eps]) cylinder(d1 = 4.2, d2 = 2.4, h = 0.9, $fn = 24);
