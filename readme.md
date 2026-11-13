@@ -5,20 +5,28 @@ An attempt to make a cheap, solid and low profile DIY finger trackball.
 
 The ball floats just 1 mm above the table on three ceramic support balls.
 Two PMW3610 sensors look up at the ball from below its equator, placed so
-their lines of sight are orthogonal (X, Y and twist are all observable).
-A Seeed XIAO nRF52840 running ZMK and a 602020 LiPo lie flat in a squashed
-dome in front of the ball. The XIAO is soldered upside down onto a base PCB
-that sits in a groove in the underside and reaches round under both sensors,
-each wired up with a short FPC ribbon; a cover over the whole underside hides
-it, held by the same screws.
+their lines of sight are orthogonal (X, Y and twist are all observable);
+their boards lie on their sides, which keeps the two pods behind the ball
+low. A Seeed XIAO nRF52840 running ZMK lies flat under a low dome in front of
+the ball, soldered upside down onto a base PCB that sits in a groove in the
+underside; an FPC ribbon runs from each sensor board to it. The 602020 LiPo
+lies flat in a pocket at the back, between the sensor pods and away from the
+XIAO's antenna, its leads running round in a groove. A cover, a separate
+printed part, closes the whole underside (battery pocket included), held by
+six screws.
+
+![Assembled](case/renders/assembled.png)
 
 ![Exploded view](case/renders/exploded.png)
 
 - `case/rollino.scad` - parametric OpenSCAD model (ball size, sensor/MCU
   placement, battery, ...). Set `part` to `assembly`, `exploded`, `hardware`, `section`,
-  or `body` / `base_cover` for printable parts.
+  or `body` / `base_cover` for the two printable parts. `fpc_check` and
+  `wall_check` should both come out empty: there is room to pull the ribbons
+  through, and no cavity comes too close to the outside.
 - `case/renders/` - preview renders: `case/render_previews.sh` (OpenSCAD) and
-  `case/render_exploded.sh` (Blender, with KiCad's 3D models of the boards).
+  `case/render_exploded.sh` (Blender, with KiCad's 3D models of the boards:
+  the assembled and the exploded view).
 - `pcb/` - KiCad projects for the sensor boards and the base board: schematics
   and routed boards, generated from the case model (see [pcb/readme.md](pcb/readme.md)).
 
@@ -57,7 +65,9 @@ a standalone Bluetooth/USB mouse.
 **Calibrating the sensors' orientation.** The fusion needs to know which way
 each sensor's X axis points (`rotation` in the shield's `ball_fusion` node,
 plus the sensor's `invert-x` / `invert-y`), which depends on how the chip
-sits on the sensor PCB. Roll the ball right: the pointer should go right;
+sits on the sensor PCB. The two boards are the same, lying on their sides
+and turned half a turn from each other, so the two rotations differ by 180
+(90 and 270 to start with). Roll the ball right: the pointer should go right;
 towards you: down; twist it: scroll, with no drift. If one direction is off,
 try one sensor at a time (cover the other's lens) and fix its rotation /
 inversion until rolling right moves the pointer mostly right.

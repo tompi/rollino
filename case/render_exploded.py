@@ -1,13 +1,14 @@
-"""Renders the exploded view (renders/exploded.png) in Blender (3.x): the
-case's pieces as OpenSCAD exports them, with KiCad's 3D models of the boards
-in place of the model's plain green ones. render_exploded.sh does the
-exports and runs this:
+"""Renders the assembled or the exploded view (renders/assembled.png,
+renders/exploded.png) in Blender (3.x): the case's pieces as OpenSCAD
+exports them, with KiCad's 3D models of the boards in place of the model's
+plain green ones. render_exploded.sh does the exports and runs this:
 
-  blender -b -P case/render_exploded.py -- export_dir out.png
+  blender -b -P case/render_exploded.py -- export_dir out.png [WIDTHxHEIGHT]
 
-export_dir has the pieces (<piece>.stl), the boards (sensor.wrl, base.wrl,
-exported with the board's origin as the user origin) and rollino.echo, the
-model's echo output with the boards' placements.
+export_dir has the pieces (<piece>.stl, pulled as far apart as the view
+wants: the model's explode_d), the boards (sensor.wrl, base.wrl, exported
+with the board's origin as the user origin) and rollino.echo, the model's
+echo output with the boards' placements.
 """
 
 import json
@@ -21,6 +22,7 @@ from mathutils import Matrix, Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 src, out = argv[0], argv[1]
+width, height = (int(v) for v in (argv[2] if len(argv) > 2 else "1200x1400").split("x"))
 
 echo = open(os.path.join(src, "rollino.echo")).read()
 place = json.loads(re.search(r'ECHO: "EXPLODED (\{.*\})"', echo).group(1).replace('\\"', '"'))
@@ -97,7 +99,7 @@ centre, size = (lo + hi) / 2, (hi - lo).length
 scene.render.engine = "CYCLES"
 scene.cycles.samples = 96
 scene.cycles.use_denoising = True
-scene.render.resolution_x, scene.render.resolution_y = 1200, 1400
+scene.render.resolution_x, scene.render.resolution_y = width, height
 # (the background goes on afterwards: under Filmic it would come out grey)
 scene.render.film_transparent = True
 world = bpy.data.worlds.new("world")

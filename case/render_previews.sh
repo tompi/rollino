@@ -1,6 +1,6 @@
 #!/bin/sh
-# Renders the OpenSCAD previews in renders/ (all but exploded.png, which
-# render_exploded.sh makes). Run after changing the case.
+# Renders the OpenSCAD previews in renders/ (all but assembled.png and
+# exploded.png, which render_exploded.sh makes). Run after changing the case.
 set -e
 cd "$(dirname "$0")"
 OPENSCAD=${OPENSCAD:-/Applications/OpenSCAD.app/Contents/MacOS/OpenSCAD}
@@ -14,7 +14,7 @@ render hardware_front hardware 1400,1000 0,-6,16,60,0,25,250 p
 render hardware_back hardware 1400,1000 0,4,20,65,0,200,240 p
 render hardware_side hardware 1400,800 0,-8,18,82,0,90,215 p
 # sections, looking straight at the cut: through the right sensor, and
-# front to back through the electronics pod
+# front to back through the electronics pod and the battery
 render section_sensor section 1400,800 0,0,24,90,0,225,170 o section_az=135
-render section_mcu section 1400,800 0,-8,24,90,0,90,170 o section_az=0
+render section_mcu section 1400,800 0,-5,24,90,0,90,180 o section_az=0
 echo "rendered to $(pwd)/renders"

@@ -633,8 +633,8 @@ def sensor(geo, symlib):
     R0603 = "Resistor_SMD:R_0603_1608Metric"
 
     def pin(n):
-        """U1's pin n on the board (datasheet fig. 5): 1 to 8 along the ear's
-        side, 9 to 16 back along the other."""
+        """U1's pin n on the board (datasheet fig. 5): 1 to 8 along one
+        long side, 9 to 16 back along the other."""
         return (3.18 - 1.78 * (n - 1), -5.35) if n <= 8 else (1.78 * (n - 9) - 10.17, 5.35)
 
     # the rows of parts either side of the chip, how far a capacitor's pads
@@ -648,11 +648,10 @@ def sensor(geo, symlib):
           "14": "+1V8", "9": "VCP", "12": "CP", "13": "CN", "1": "VCSEL+", "10": "VCSEL+",
           "15": "VCSEL-", "16": "VCSEL-", "11": "GND"},
          (-2.988, 0), 0),
-        # the case's screw boss is behind the ear (y -7.9 and beyond, x -6.9..-0.9): nothing there
         ("U2", "Regulator_Linear:TPS7A0518PDBV", "TPS7A0518PDBVR", "Package_TO_SOT_SMD:SOT-23-5", (120, 50),
          {"1": "+3V3", "3": "+3V3", "2": "GND", "4": None, "5": "+1V8"}, (0.9, -8.35), 180),
-        # mouth facing off the up-slope edge, 0.5 mm in from it, where the
-        # ribbon is easy to push in and latch
+        # mouth facing off the board's front edge, 0.5 mm in from it, where
+        # the ribbon is easy to push in and latch
         ("J1", FPC_SYMBOL, FPC_VALUE, FPC_FP, (60, 110), fpc_pins(270, (0, 1), {}), (s["sc"] - s["pcb_end"] + 0.5 + FPC_MOUTH, 0), 270),
         # upright at the row's end, out of the way of the tracks to the pins
         ("R1", "Device:R", "10k", R0603, (215, 50), {"1": "+3V3", "2": "NRESET"}, (-11.4, -8.0), 270),
@@ -671,11 +670,21 @@ def sensor(geo, symlib):
         ("C2", "Device:C", "100nF", C0603, (162, 50), {"1": "+1V8", "2": "GND"}, (pin(14)[0], BOT), 270),
         ("C1", "Device:C", "3.3uF", C0603, (150, 50), {"1": "+1V8", "2": "GND"}, (0.5, BOT), 270),
     ]
+    placed = {}
     for ref, lib_id, value, fp, at, pins, bat, brot in parts:
         text = symlib.get(lib_id)
         u = sch.symbol(ref, lib_id, value, fp, at, pins, text=text)
         # the board's too crowded for references on its silkscreen
-        b.footprint(fp, ref, value, bat, brot, pins, u, Schematic.pin_names(sch.lib(lib_id, text)), fab_ref=True)
+        placed[ref] = b.footprint(fp, ref, value, bat, brot, pins, u, Schematic.pin_names(sch.lib(lib_id, text)), fab_ref=True)
+    # The connector's first three pads (the ones nearest the chip's row of
+    # signal pins) each get a track out of their tail and up between the
+    # tails and the lens cutout, in the order their pins come along the row:
+    # left to itself, Freerouting can box the middle one in
+    tails = sorted((at for num, net, at in b.pads(placed["J1"]) if num != "MP"), key=lambda at: at[1])
+    for k, (px, py) in enumerate(tails[:3]):
+        net = next(net for num, net, at in b.pads(placed["J1"]) if at == (px, py))
+        lane = px + 0.9 + 0.35 * k
+        b.track(net, [(px, py), (lane, py), (lane, tails[0][1] - 1.4)])
     # U2's EN (pin 3) is boxed in by the board edge: tie it to VIN (pin 1)
     # down the gap between the package's two rows of pins, which Freerouting
     # won't use
@@ -721,14 +730,18 @@ def sensor(geo, symlib):
         ref = "TP%d" % (i + 1)
         u = sch.symbol(ref, "Connector:TestPoint", net, "TestPoint:TestPoint_Pad_D1.0mm", (245, 100 + 35 * i), {"1": net}, bom=False)
         b.footprint("TestPoint:TestPoint_Pad_D1.0mm", ref, net, at, 0, {"1": net}, u, fab_ref=True)
-    u = sch.symbol("H1", "Mechanical:MountingHole", "M2", "MountingHole:MountingHole_2.2mm_M2", (230, 50), {}, bom=False)
-    b.footprint("MountingHole:MountingHole_2.2mm_M2", "H1", "M2", (s["ear"][0], -s["ear"][1]), sym_uuid=u)
+    # two screws, one either side of the lens: in the ear on the board's back
+    # end and beside the connector
+    for i, h in enumerate(s["holes"]):
+        ref = "H%d" % (i + 1)
+        u = sch.symbol(ref, "Mechanical:MountingHole", "M2", "MountingHole:MountingHole_2.2mm_M2", (230 + 12 * i, 50), {}, bom=False)
+        b.footprint("MountingHole:MountingHole_2.2mm_M2", ref, "M2", (h[0], -h[1]), sym_uuid=u, fab_ref=True)
     sch.flag("+3V3", (40, 30))
     sch.flag("GND", (25, 30))
     sch.text("J1 (FPC): pins numbered so each signal meets itself through the ribbon (see pcb/readme.md)", (25, 160))
-    sch.text("Board frame: origin on the optical axis, x down the slope; mounted chip side out, lens towards the ball", (25, 166))
+    sch.text("Board frame: origin on the optical axis, x along the chip towards the back of the case; mounted on its side, chip side out, lens towards the ball", (25, 166))
     sch.write(os.path.join(d, name + ".kicad_sch"))
-    # a small logo in bare copper on the back, across the up-slope end,
+    # a small logo in bare copper on the back, across the front end,
     # between the edge and the lens
     lens_end = s["sc"] - 10
     for layer in (pcbnew.B_Cu, pcbnew.B_Mask):
@@ -744,6 +757,7 @@ def base(geo, symlib):
     sch = Schematic(name, "Rollino base board", [
         "XIAO nRF52840 soldered upside down (parts through the cutout),",
         "FPC connectors to the two sensor boards, pads for optional buttons.",
+        "The battery's leads go straight to the XIAO's battery pads.",
     ])
     b = Board("Rollino base board", BASE_ORIGIN)
     b.outline(geo["base_pcb"])
@@ -807,25 +821,28 @@ def base(geo, symlib):
         # (its reference would hang over the band's edge: the label names it)
         fp = b.footprint(FPC_FP, ref, FPC_VALUE, (fx - mid * ux, fy - mid * uy), rot, pins, u, fab_ref=True)
         # A track out of each pad's tail, fanned out to twice the pads' pitch
-        # (the outer ones turning first). Freerouting can't start a track
-        # from pads this close at an odd angle, and left this connector
+        # and shifted towards the band's inner edge, as the band curves in
+        # that way (the innermost turning first). Freerouting can't start a
+        # track from pads this close at an odd angle, and left this connector
         # unconnected: route.py has it join these up instead. They run
-        # along the board's nearest axis (10 degrees off the pads') and turn
-        # at 45, as its own tracks do
+        # along the board's nearest axis (a few degrees off the pads') and
+        # turn at 45, as its own tracks do
         tails = [(num, at) for num, net, at in b.pads(fp) if num != "MP"]
         ax, ay = (0, -math.copysign(1, uy)) if abs(uy) > abs(ux) else (-math.copysign(1, ux), 0)
         cx, cy = (sum(at[k] for num, at in tails) / len(tails) for k in (0, 1))
+        inward = -math.copysign(1, cx * -ay + cy * ax)   # which way across the fan the ball's hole is
         for num, (px, py) in tails:
             # from just inside the pad's end; s across the fan, t along it
             px, py = px - 0.45 * ux, py - 0.45 * uy
             s = (px - cx) * -ay + (py - cy) * ax
             t0 = (px - cx) * ax + (py - cy) * ay
-            turn = 2.1 - 0.6 * abs(s)                    # about 1.8, 1.5 and 1.2 down
-            # (ground's ends at a via into the back's pour: by the left
-            # connector that's further on, past the logo, which has none)
-            far = 8.6 if pins[num] == "GND" and side == "L" else 3.3
-            pts = [(cx - s * k * ay + t * ax, cy + s * k * ax + t * ay)
-                   for k, t in ((1, t0), (1, turn), (2, turn + abs(s)), (2, far))]
+            q = s * inward                               # 1.25 (innermost) to -1.25
+            turn = 0.8 + (1.25 - q)                      # 0.5 further down for each
+            q2 = 2 * q + 1.5
+            # (ground's ends at a via into the back's pour)
+            far = 0.8 + 2.75 + 0.6
+            pts = [(cx - l * inward * ay + t * ax, cy + l * inward * ax + t * ay)
+                   for l, t in ((q, t0), (q, turn), (q2, turn + q2 - q), (q2, far))]
             b.track(pins[num], pts)
             if pins[num] == "GND":
                 b.via("GND", pts[-1])
@@ -835,11 +852,11 @@ def base(geo, symlib):
         b.via("GND", (tab[0] + 1.75 * ax, tab[1] + 1.75 * ay))
         # its label on the band, a little way round towards the front
         az = math.atan2(foot[0], -foot[1])
-        az -= math.copysign(math.radians(15), az)
+        az -= math.copysign(math.radians(19), az)
         b.text(side, kp((28.25 * math.sin(az), -28.25 * math.cos(az))), 1.2)
 
     # optional buttons (to GND) and a GND pad, on the band near the front
-    for i, (net, az) in enumerate([("BTN_L", -35), ("BTN_M", -50), ("BTN_R", 35), ("GND", 50)]):
+    for i, (net, az) in enumerate([("BTN_L", -30), ("BTN_M", -38), ("BTN_R", 30), ("GND", 38)]):
         ref = "TP%d" % (i + 1)
         u = sch.symbol(ref, "Connector:TestPoint", net, "TestPoint:TestPoint_Pad_D1.5mm", (60 + 20 * i, 145), {"1": net}, bom=False)
         w = (27.5 * math.sin(math.radians(az)), -27.5 * math.cos(math.radians(az)))
@@ -856,10 +873,11 @@ def base(geo, symlib):
     sch.text("J1/J2 (FPC): 1 +3V3, 2 GND, 3 SCLK, 4 SDIO, 5 NCS, 6 MOTION - or reversed, so each signal meets itself through the ribbon", (25, 181))
     sch.text("SDIO goes to both SPI MOSI (D5) and MISO: the firmware puts them on the same pin", (25, 187))
     sch.write(os.path.join(d, name + ".kicad_sch"))
-    # the logo in bare copper on the back of the band's left side, clear of
-    # the screw hole below it; route.py keeps the tracks out of its way
+    # the logo in bare copper on the back, beside the XIAO on the left,
+    # outside the screw hole there; route.py keeps the tracks out of its way
+    xc = pos["xiao_center"]
     for layer in (pcbnew.B_Cu, pcbnew.B_Mask):
-        b.text("ROLLINO", kp((-28.6, 2.6)), 2.2, layer, 90, 0.2)
+        b.text("ROLLINO", kp((xc[0] - 17.2, xc[1] + 1.2)), 2.0, layer, 90, 0.2)
     b.save(os.path.join(d, name + ".kicad_pcb"))
 
 

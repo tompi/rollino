@@ -95,7 +95,11 @@
 
     /* sensor positions as in case/rollino.scad (its console echo prints
      * them): azimuth from the front, positive to the right, and elevation
-     * above the ball's equator, in millidegrees */
+     * above the ball's equator, in millidegrees. The boards lie on their
+     * sides, the same board turned half a turn from one sensor to the
+     * other: hence the rotations, a quarter turn either way from "X down
+     * the slope" (still to be calibrated against the chip's own axes: see
+     * the readme) */
     ball: ball_fusion {
         compatible = "rollino,ball-fusion";
         pointer-scale = <100>;
@@ -104,16 +108,16 @@
 
         right {
             device = <&sensor_right>;
-            azimuth = <130303>;
-            elevation = <(-22000)>;
-            rotation = <0>;
+            azimuth = <130537>;
+            elevation = <(-21500)>;
+            rotation = <90>;
         };
 
         left {
             device = <&sensor_left>;
-            azimuth = <(-130303)>;
-            elevation = <(-22000)>;
-            rotation = <0>;
+            azimuth = <(-130537)>;
+            elevation = <(-21500)>;
+            rotation = <270>;
         };
     };
 
