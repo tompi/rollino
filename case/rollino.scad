@@ -9,24 +9,29 @@
 // A XIAO nRF52840 lies flat in a low squashed-sphere pod at the front,
 // USB-C pointing forward. It is soldered to a base PCB that sits in a groove
 // in the case's underside and reaches a little way round each side, where an
-// FPC ribbon comes in from the sensor board. The LiPo lies flat in a pocket
-// at the back, between the sensor pods and well away from the XIAO's
-// antenna; its leads run round in a groove in the underside. A cover (a
-// separate part) closes the whole underside, battery pocket included.
+// FPC ribbon comes in from the sensor board. The LiPo is at the back, well
+// away from the XIAO's
+// antenna; its leads run round in a groove in the underside. The sensor
+// pods and the battery share one ring round the back half of the ball: the
+// LiPo stands in it between the two sensors, leaning against the ball at
+// the sensor boards' tilt. A cover (a separate part) closes the whole
+// underside, the battery's pocket included, and each sensor board has a
+// cover of its own on the ball's side, with a window for the lens.
 //
 // Coordinates: table is z=0, front (towards the user) is -y.
 // Azimuths are measured from the front, positive towards +x.
 
 /* [View] */
 // assembly | exploded | section | hardware | body | base_cover |
+// sensor_cover (print two) |
 // base_pcb / sensor_pcb (2D board outlines, for ../pcb/gen/generate.py) |
-// fpc_check / wall_check (both should come out empty)
-part = "section";
+// fpc_check / wall_check / usb_check (all should come out empty)
+part = "body";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 // part="exploded" draws only this piece of it, if set (body, ball,
-// supports, sensor_boards, electronics, base_pcb, cover, screws, or the
-// battery's pouch, pcm and leads): ../case/render_exploded.sh renders it in
+// supports, sensor_boards, sensor_covers, sensor_screws, electronics,
+// base_pcb, cover, screws, or the battery's pouch, pcm and leads): ../case/render_exploded.sh renders it in
 // Blender a piece at a time, with KiCad's models of the boards
 explode_only = "";
 // how far apart part="exploded" pulls the pieces (0: assembled)
@@ -59,8 +64,8 @@ wall = 1.6;
 pcb_r = 4.5;
 // rounding of the rim patches that blend a pod into the rim
 shell_r = 4;
-// rounding of the sensor pods: each is a pillow round its board, lying
-// against the ball
+// rounding of the ring round the back of the ball, which holds the sensor
+// boards and the battery
 pod_r = 6;
 
 /* [Sensors: PMW3610 + LM18-LSI] */
@@ -95,7 +100,21 @@ parts_h = 3;
 // pocket; pilot hole diameter
 pcb_screw_d = 1.8;
 // pilot hole depth behind the PCB's back face
-pcb_screw_depth = 5;
+pcb_screw_depth = 5.5;
+// A printed cover fills the board's pocket on the ball's side, flush with
+// the ball's cup, and keeps dust off the board; the same two screws (pan
+// head, M2 x 10) go through it. Gap to the pocket's wall all round
+cover_gap = 0.15;
+// what the screw heads sit on (the rest of the cover's thickness is
+// counterbored); also where the cover's skin over the lens ends, so the
+// counterbores stay closed
+cover_seat = pcb_top_z - pcb_t - lens_ref_z + 0.1;
+// counterbore for the screw heads (pan head, up to 3.8)
+cover_head_d = 4.2;
+// the lens's window in the cover, a slot along the chip: [from, to (centres,
+// from the optical axis), radius]. ASSUMED: wide enough for the laser's
+// spot and the lens's view; check against the LM18-LSI drawing
+cover_window = [-6, 3, 3];
 // one screw is in an ear on the board's back end, on its centre line, this
 // far beyond the edge
 pcb_ear_d = 5;
@@ -131,17 +150,15 @@ pcb_ext = max(0, (16.2 + 0.6) / 2 + 1 + fpc_conn.y - pcb_w / 2);
 // LiPo cell 602020 (~200 mAh): [length, width, thickness]
 // sizes vary between makers; this is the larger end (22 x 19.5 x 6.5 is
 // listed), length including the protection board folded over one end. It
-// lies flat in a pocket at the back, between the sensor pods, lengthways
-// across; the pocket is open to the cover, which is thinned under it
+// stands in the ring at the back, between the sensors, leaning against the
+// ball at their tilt, protection board down; it slides up into its pocket
+// from below before the cover goes on, and stands on the cover
 batt = [22, 20, 6.5];
 // length of that protection-board end (kapton-taped), on the side the leads leave
 batt_pcm = 2.5;
-// room beyond it for the leads
-batt_leads = 1.2;
-// the pocket's inner face, from the ball's axis (clear of the rear support ball)
-batt_in = 24.5;
-// what's left of the cover under the cell
-batt_floor = 1.2;
+// the pocket's inner face, from the ball's surface (clear of the rear
+// support ball and of the sensor boards' ears)
+batt_z0 = 5;
 // which side (1: right, -1: left) the leads run round to the XIAO, in a
 // groove in the case's underside inside the base PCB's band: [radius,
 // width, height]; they come up behind that corner of the XIAO's cavity.
@@ -189,6 +206,12 @@ elec_dome_back = 3.5;
 elec_screw_y = xiao.y / 2 + 4.8;
 // plug overmold recess in front of the receptacle: [width, height]
 usb_plug = [13.5, 7.5];
+// the biggest plug the USB-C spec allows: overmold [width, height, length
+// (typical)]; part="usb_check" tries it against the case, and the echo says
+// how far it stays above the table
+usb_overmold = [12.35, 6.5, 30];
+// the receptacle's axis below the base PCB's top (it hangs under the XIAO)
+usb_axis = 1.6;
 // lowest point of any pod above the table
 floor_z = 0;
 
@@ -373,6 +396,33 @@ function board_pt(az, p) = at_ball_pt(az, sensor_el_, side(az) > 0 ? [-p.y, p.x,
 
 module sensor_pod_outer() { hull() for (b = pod_balls) translate(b) sphere(r = pod_r, $fn = 48); }
 
+// The ring: what a sensor board's pillow sweeps out when it is turned round
+// the ball's axis, from one sensor's front end round the back to the
+// other's; its section ([radius, z] of the pillow's balls) is hulled with
+// the rim's. The pillows themselves are flat, so each sticks out of the
+// ring's end a little, as a rounded nose.
+ring_xs = concat([0], [for (i = [0 : 6]) pod_x[0] + pod_r + (pod_x[1] - pod_x[0] - 2 * pod_r) * i / 6]);
+function ring_rz(p) = let(q = board_pt(sensor_az_[0], p)) [norm([q.x, q.y]), q.z];
+ring_pts = [for (x = ring_xs, y = [-1, 1] * (pod_y - pod_r), o = [0, 1]) ring_rz([x, y, o ? pod_z - pod_r : cup_z(x, y)])];
+ring_top = max([for (p = ring_pts) p[1]]) + pod_r;
+// the ring ends at the azimuth of the pillow's outermost front corner
+ring_a1 = max([for (b = pod_balls) if (b.x < 0) let(q = board_pt(sensor_az_[0], b)) atan2(q.x, -q.y)]);
+
+module ring_profile() {
+  hull() {
+    for (p = ring_pts) translate(p) circle(r = pod_r, $fn = 48);
+    translate([R - 4, 0]) square([rim_wall + 4, rim_h]);
+  }
+}
+
+module back_ring() {
+  rotate([0, 0, ring_a1 - 90]) rotate_extrude(angle = 360 - 2 * ring_a1) ring_profile();
+  for (s = [1, -1]) hull() {
+    for (p = ring_pts) translate(polar_pt(s * ring_a1, p[0], p[1])) sphere(r = pod_r, $fn = 32);
+    at_board(sensor_az_[s > 0 ? 0 : 1]) for (b = pod_balls) if (b.x < 0) translate(b) sphere(r = pod_r, $fn = 48);
+  }
+}
+
 // the ribbon's channel from its fold down the slope, over the chip's back
 // and past the board's low edge (s: side(az))
 module fpc_leg(s) {
@@ -402,11 +452,34 @@ module rim_patch(az, w) {
     rbox([rim_wall + 4, w, rim_h + 2], shell_r);
 }
 
-// the rim patch under a sensor pod: under its middle, which is in front of
-// the sensor's azimuth
-function pod_patch_az(az) = az + side(az) * atan((pod_x[0] + pod_x[1]) / 2 / (R + rim_wall / 2));
-module sensor_pod_blob(az) {
-  hull() { at_board(az) sensor_pod_outer(); rim_patch(pod_patch_az(az), 0.7 * (pod_x[1] - pod_x[0])); }
+// ---------- sensor cover ----------
+
+// Fills the board's pocket from the PCB's face to the ball's cup (board
+// frame), with a cavity for the lens, a window under it and counterbored
+// holes for the board's two screws; the ear's counterbore is open at the
+// ear's end, where it would leave no wall. The same part serves both
+// sensors.
+module sensor_cover() {
+  zt = pcb_top_z - pcb_t;
+  zs = zt - cover_seat;
+  difference() {
+    translate([sc, 0, -pocket_reach]) linear_extrude(zt + pocket_reach) pcb_outline(0.3 - cover_gap);
+    translate([0, 0, -R]) sphere(r = R + ball_clear, $fn = 128);
+    translate([sc - lens_w / 2 - 0.2, -lens_h / 2 - 0.2, lens_ref_z - 0.1]) cube([lens_w + 0.4, lens_h + 0.4, zt]);
+    hull() for (x = [cover_window[0], cover_window[1]])
+      translate([x, 0, -pocket_reach]) cylinder(r = cover_window[2], h = pocket_reach + zt, $fn = 48);
+    for (h = pcb_holes) translate([h.x, h.y, -pocket_reach - eps]) {
+      cylinder(d = 2.4, h = pocket_reach + zt + 1, $fn = 24);
+      hull() for (x = [0, h.y == 0 ? pcb_ear_d : 0]) translate([x, 0, 0]) cylinder(d = cover_head_d, h = pocket_reach + zs, $fn = 32);
+    }
+  }
+}
+
+module sensor_covers() { for (az = sensor_az_) color("#c8c4bc") at_board(az) sensor_cover(); }
+
+// the boards' screws, heads on the covers' seats (board frame)
+module sensor_screws() {
+  for (h = pcb_holes) translate([h.x, h.y, pcb_top_z - pcb_t - cover_seat]) rotate([180, 0, 0]) screw(10);
 }
 
 // ---------- electronics pod ----------
@@ -429,6 +502,9 @@ module elec_cavity() {
     cube(elec_size);
   }
   usb_recess();
+  // the receptacle's way through the wall between the recess and the cavity
+  // (the base PCB has a notch there)
+  at_elec() translate([-eps, elec_size.y / 2 - 4.8, -base_pcb_t - eps]) cube([wall + 0.6, 9.6, base_pcb_t + 2 * eps]);
   wire_bay();
 }
 
@@ -437,7 +513,7 @@ module elec_cavity() {
 // cover; the base PCB has a notch there, a wall wider all round
 module usb_recess() {
   at_elec() translate([eps, elec_size.y / 2, 0]) rotate([0, -90, 0]) hull()
-    for (z = [-1.6, -elec_floor - 5], d = [-1, 1])
+    for (z = [-usb_axis, -elec_floor - 5], d = [-1, 1])
       translate([z, d * (usb_plug.x - usb_plug.y) / 2, 0]) cylinder(d = usb_plug.y, h = 30);
 }
 
@@ -449,16 +525,20 @@ module xiao_cutout(h, d = 0) {
 
 // ---------- battery ----------
 
-// the cell's pocket at the back, open to the cover (which is thinned under
-// it), and the low box round it
-batt_pocket = [batt.x + batt_leads + 0.6, batt.y + 0.6, batt.z + 0.4];
-batt_top = floor_z + batt_floor + batt_pocket.z;
+// The cell's frame: on the ball's surface at the back, at the sensors'
+// elevation: x down the slope, y across, z outwards. The pocket runs on
+// down to the cover, which is how the cell goes in; the cell stands on the
+// cover on its low outer edge, and its leads leave from the wedge of room
+// that leaves under its inner edge.
+module at_batt() { at_ball(180, sensor_el_) children(); }
+function batt_pt(p) = at_ball_pt(180, sensor_el_, p);
+batt_pocket = [batt.x + 0.6, batt.y + 0.6, batt.z + 0.4];
+// where a face z out from the ball comes down to height h
+function batt_x_at(z, h) = (zc + (R + z) * sin(sensor_el_) - h) / cos(sensor_el_);
+batt_x1 = batt_x_at(batt_z0 + batt_pocket.z, floor_z + base_cover_t + 0.2);
 
-module batt_cavity() { translate([-batt_pocket.x / 2, batt_in, floor_z + batt_floor]) cube(batt_pocket); }
-
-module batt_pod_outer() {
-  translate([0, batt_in + batt_pocket.y / 2, floor_z])
-    rbox([batt_pocket.x + 2 * wall + 0.8, batt_pocket.y + 2 * wall + 0.8, 2 * (batt_top + wall - floor_z)], 2.5);
+module batt_cavity() {
+  at_batt() translate([batt_x1 - batt_pocket.x, -batt_pocket.y / 2, batt_z0]) cube([batt_pocket.x + 30, batt_pocket.y, batt_pocket.z]);
 }
 
 // The leads' way round to the XIAO (world, at the cover's top): out of the
@@ -468,7 +548,8 @@ wire_bay_w = 5.5;
 wire_bay_x = batt_wire_side * (elec_size.y / 2 - wire_bay_w / 2);
 wire_bay_y = [elec_back, -batt_wire[0]];
 function az_of(p) = atan2(p.x, -p.y);
-wire_p0 = [batt_wire_side * (batt_pocket.x / 2 - 1.5), batt_in + 2.5];
+wire_p0 = [batt_wire_side * (batt_pocket.y / 2 - 2.5),
+           batt_pt([batt_x_at(batt_z0, floor_z + base_cover_t), 0, batt_z0 + 1.6]).y];
 wire_az = [abs(az_of(wire_p0)), abs(az_of([wire_bay_x, wire_bay_y[1] - 1]))];
 wire_path = concat([wire_p0],
   [for (i = [0 : 24]) polar2(batt_wire_side * (wire_az[0] + (wire_az[1] - wire_az[0]) * i / 24), batt_wire[0])]);
@@ -594,7 +675,7 @@ module base_pcb() { color("darkgreen") translate([0, 0, floor_z + base_cover_t])
 
 // the cover: the case's outer cut off at base_cover_t, with the ball's hole,
 // the USB plug's recess, a pocket for the XIAO's parts, a hole under its
-// reset button, the battery's pocket and the screws' countersunk holes
+// reset button and the screws' countersunk holes
 module base_cover() {
   difference() {
     intersection() {
@@ -603,7 +684,6 @@ module base_cover() {
     }
     ball_cuts();
     usb_recess();
-    batt_cavity();
     xiao_cutout(xiao_parts_h - base_pcb_t + 0.2 + eps, xiao_parts_h - base_pcb_t + 0.2);
     // (the model lies upside down: see electronics())
     at_elec() translate([0.3 + usb_overhang + xiao_reset.x, elec_size.y / 2 - xiao_reset.y, -elec_floor - 1])
@@ -696,9 +776,8 @@ module support_hole(az) {
 module body_outer() {
   union() {
     rim();
-    for (az = sensor_az_) sensor_pod_blob(az);
+    back_ring();
     elec_pod_blob();
-    batt_pod_outer();
   }
 }
 
@@ -765,11 +844,10 @@ module electronics(model = true) {
   }
 }
 
-// the cell in its pocket, protection board towards the side its leads
-// leave, and the leads round to the XIAO's back
-module battery(only = "") {
-  mirror([batt_wire_side < 0 ? 1 : 0, 0, 0])
-    translate([-batt_pocket.x / 2 + 0.3, batt_in + 0.3, floor_z + batt_floor + 0.1]) lipo(only);
+// the cell in its pocket, protection board down, and the leads round to
+// the XIAO's back
+module battery(only = "", slide = 0) {
+  at_batt() translate([batt_x1 - batt.x - 0.3 + slide, -batt.y / 2, batt_z0 + 0.2]) lipo(only);
   if (only == "" || only == "leads") {
     zw = floor_z + base_cover_t + 0.6;
     zx = base_top + xiao.z + xiao_pads + 0.5;
@@ -777,12 +855,23 @@ module battery(only = "") {
     for (d = [-1, 1]) color(d < 0 ? "black" : "red") {
       o = d * 0.55;
       pts = concat(
-        [[batt_wire_side * (batt_pocket.x / 2 - 0.6), batt_in + 0.3 + batt.y / 2 + d * 2, floor_z + batt_floor + batt.z / 2]],
+        [batt_pt([batt_x1 - 1.5, -batt_wire_side * (batt.y / 2 - 5 + d), batt_z0 + 1.5])],
         [for (i = [0 : len(wire_path) - 1]) let(p = wire_path[i], r = norm(p)) [p.x * (r + o) / r, p.y * (r + o) / r, zw]],
         [[wire_bay_x + o, wire_bay_y[1] - 1.2, zx], [wire_bay_x + o, far - 2, zx],
          [batt_wire_side * 3 + o * 2.5, far - 4, zx], [batt_wire_side * 3 + o * 2.5, far - 4, zx - 0.5]]);
       tube(pts, 0.8);
     }
+  }
+}
+
+// a USB-C plug in the receptacle (the biggest the spec allows), visual and
+// for part="usb_check"
+module usb_plug_model() {
+  // the receptacle, as far as the XIAO's edge, and the plug in it
+  at_elec() color("silver") translate([0.3, elec_size.y / 2 - 4.5, -3.2]) cube([usb_overhang, 9, 3.2]);
+  at_elec() translate([-0.1, elec_size.y / 2, -usb_axis]) rotate([0, -90, 0]) {
+    color("silver") translate([0, 0, -6.5]) linear_extrude(6.5) rrect([2.56, 8.34], 1.2);
+    color("#333") linear_extrude(usb_overmold.z) rrect([usb_overmold.y, usb_overmold.x], 2);
   }
 }
 
@@ -813,7 +902,9 @@ module assembly(c = false) {
   color("firebrick") cut(c) translate([0, 0, zc]) sphere(r = R, $fn = 128);
   cut(c) supports();
   cut(c) sensor_boards();
+  cut(c) sensor_covers();
   cut(c) electronics(!c);
+  if (c) cut(c) usb_plug_model();
   cut(c) battery();
 }
 
@@ -826,20 +917,26 @@ module screw(l, head_d = 3.8) {
 }
 
 // every part pulled apart along the way it goes in: the ball and support
-// balls up, the sensor boards in towards the ball, the base PCB (with the
-// XIAO on it) and the battery down out of the case, the cover below that,
+// balls up, the sensor boards, their covers and their screws in towards the
+// ball (by these shares of d), the base PCB (with the
+// XIAO on it) down out of the case, the battery down its pocket, the cover below that,
 // and the screws below it; d = 0 leaves it assembled
+explode_in = [0.25, 0.5, 0.8];
 module exploded(d = explode_d, only = "") {
   function show(p) = only == "" || only == p;
   if (show("body")) color("#d8d4cc") body();
   if (show("ball")) color("firebrick") translate([0, 0, zc + 2.2 * d]) sphere(r = R, $fn = 128);
   if (show("supports")) translate([0, 0, d]) supports();
-  if (show("sensor_boards")) for (az = sensor_az_) at_board(az) translate([0, 0, -0.8 * d]) sensor_board();
+  if (show("sensor_boards")) for (az = sensor_az_) at_board(az) translate([0, 0, -explode_in[0] * d]) sensor_board();
+  if (show("sensor_covers")) for (az = sensor_az_) color("#c8c4bc") at_board(az) translate([0, 0, -explode_in[1] * d]) sensor_cover();
+  if (show("sensor_screws")) for (az = sensor_az_) at_board(az) translate([0, 0, -explode_in[2] * d]) sensor_screws();
   translate([0, 0, -d]) {
     if (show("electronics")) electronics();
     if (show("base_pcb")) { base_pcb(); base_fpc_conns(); }
-    for (p = ["pouch", "pcm", "leads"]) if (only == p || only == "") battery(p);
+    if (show("leads")) battery("leads");
   }
+  // the cell slides out down its pocket
+  for (p = ["pouch", "pcm"]) if (show(p)) battery(p, 1.3 * d);
   if (show("cover")) translate([0, 0, -1.8 * d]) color("#b8b4ac") base_cover();
   if (show("screws")) for (p = base_screws) translate([p.x, p.y, floor_z - 1.8 * d - (d > 0 ? 4 : 0)]) rotate([180, 0, 0]) screw(8);
 }
@@ -868,6 +965,10 @@ else if (part == "hardware") hardware();
 else if (part == "section") assembly(true);
 else if (part == "body") body();
 else if (part == "base_cover") base_cover();
+// as it prints: the face that lies on the board down
+else if (part == "sensor_cover") translate([0, 0, pcb_top_z - pcb_t]) rotate([180, 0, 0]) sensor_cover();
+// what's in the way of the biggest USB-C plug: should be empty
+else if (part == "usb_check") intersection() { union() { body(); base_cover(); base_pcb(); } usb_plug_model(); }
 else if (part == "base_pcb") difference() { base_pcb_shape(); projection() xiao_cutout(1); }
 else if (part == "sensor_pcb") translate([sc, 0]) pcb_outline();
 // what's in the way of a ribbon fpc_clear thicker than it is: should be empty
@@ -884,7 +985,8 @@ else if (part == "wall_check") difference() {
 echo(str("ball top z = ", zc + R, "  sensor el = ", sensor_el_, "  sensor az = ", sensor_az_,
           "  elec pod top z = ", at_elec_pt([0, 0, -elec_floor + elec_box.z / 2]).z + elec_dome_r.z,
           "  front y = ", at_elec_pt([elec_size.x / 2 + elec_dome_back, 0, 0]).y - elec_dome_r.x,
-          "  battery box top z = ", batt_top + wall));
+          "  ring top z = ", ring_top, "  ring outer r = ", max([for (p = ring_pts) p[0]]) + pod_r, "  ring from az = ", ring_a1,
+          "  USB plug above table = ", base_top - usb_axis - usb_overmold.y / 2));
 // for laying out the base PCB (world x/y, mm; table at z=0)
 echo(str("base PCB: XIAO board corner at USB end, left = ", at_elec_pt([0.3 + usb_overhang, (elec_size.y + xiao.y) / 2, 0]),
          "  screws = ", pcb_screws,
@@ -893,7 +995,7 @@ echo(str("base PCB: XIAO board corner at USB end, left = ", at_elec_pt([0.3 + us
 
 // for render_exploded.py: where each board's top face goes in the exploded
 // view, as matrices from the board's KiCad frame (x, -y, z up from its top)
-echo(str("EXPLODED {\"sensor\": ", [for (az = sensor_az_) at_board_m(az) * m_tr([0, 0, pcb_top_z - 0.8 * explode_d])],
+echo(str("EXPLODED {\"sensor\": ", [for (az = sensor_az_) at_board_m(az) * m_tr([0, 0, pcb_top_z - explode_in[0] * explode_d])],
          ", \"base\": ", m_tr([0, 0, base_top - explode_d]), "}"));
 
 // machine-readable, for ../pcb/gen/generate.py: base PCB positions in world

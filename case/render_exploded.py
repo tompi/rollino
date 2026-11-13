@@ -48,7 +48,8 @@ def material(name, colour, roughness=0.5, metallic=0.0):
 
 PIECES = [  # piece, colour, roughness, metallic
     ("body", "#d8d4cc", 0.6, 0), ("cover", "#b8b4ac", 0.6, 0), ("ball", "#b22222", 0.25, 0),
-    ("supports", "#f4f4f4", 0.2, 0), ("screws", "#696969", 0.35, 1), ("pouch", "#c0c0c0", 0.3, 1),
+    ("supports", "#f4f4f4", 0.2, 0), ("screws", "#696969", 0.35, 1),
+    ("sensor_covers", "#c8c4bc", 0.6, 0), ("sensor_screws", "#696969", 0.35, 1), ("pouch", "#c0c0c0", 0.3, 1),
     ("pcm", "#d4a017", 0.5, 0), ("leads", "#8b1a1a", 0.5, 0)]
 
 for name, colour, rough, metal in PIECES:

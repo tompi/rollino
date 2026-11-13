@@ -45,7 +45,8 @@ The same board for both sensors. It lies on its side (the chip's long axis
 horizontal, the connector end towards the front of the case), so the left
 one is turned half a turn from the right one. It's screwed into its pod from
 the ball side with two M2 screws, chip side out, lens towards the ball; the
-case's pocket matches its outline, ear included.
+case's pocket matches its outline, ear included, and a printed cover with a
+window for the lens goes in on top of it, under the same two screws.
 
 - PMW3610DM-SUDU + LM18-LSI lens: circuit and footprint (with the lens cutout)
   after [badjeff/pmw3610-pcb](https://github.com/badjeff/pmw3610-pcb)
@@ -95,7 +96,7 @@ way round each side, held (with the cover under it) by four M2 screws.
 - Seeed XIAO nRF52840 soldered **upside down** by its castellated edges: its
   parts (USB-C included) hang through the cutout into a pocket in the cover;
   its battery pads face up, and the LiPo's leads (which come round from the
-  battery's pocket at the back of the case, and up behind the XIAO's far
+  battery's pocket in the ring at the back of the case, and up behind the XIAO's far
   corner) solder straight onto them
 - J1 (right sensor) and J2 (left) at the band's ends, along it, mouths facing
   the ribbons coming along the channel in the case's underside

@@ -20,7 +20,7 @@ render() {
   mkdir "$d"
   cp "$tmp/sensor.wrl" "$tmp/base.wrl" "$d"
   "$OPENSCAD" --enable=manifold -o "$d/rollino.echo" -D 'part="none"' -D "explode_d=$2" rollino.scad 2> /dev/null
-  for p in body cover ball supports screws pouch pcm leads; do
+  for p in body cover ball supports screws sensor_covers sensor_screws pouch pcm leads; do
     "$OPENSCAD" --enable=manifold -o "$d/$p.stl" -D 'part="exploded"' -D "explode_only=\"$p\"" -D "explode_d=$2" rollino.scad 2> /dev/null
   done
   "$BLENDER" -b -P render_exploded.py -- "$d" "$d/$1.png" "$3" > /dev/null
