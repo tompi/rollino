@@ -53,3 +53,4 @@ adapter/adapter-backups
 logs/
 __pycache__/
 *.lck
+case/stl/

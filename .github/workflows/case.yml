@@ -1,0 +1,27 @@
+name: case
+
+# the case's printable parts as STLs (artifact "case-stl"), and the
+# clearance checks that should come out empty
+on:
+  push:
+    paths: ["case/**", "pcb/3d/**", ".github/workflows/case.yml"]
+  pull_request:
+    paths: ["case/**", "pcb/3d/**", ".github/workflows/case.yml"]
+  workflow_dispatch:
+
+jobs:
+  stl:
+    runs-on: ubuntu-latest
+    # a development snapshot: the last release (2021.01) has no Manifold
+    # backend and takes far longer
+    container: openscad/openscad:dev
+    steps:
+      - uses: actions/checkout@v4
+      - run: openscad --version
+      - run: sh case/build_stl.sh "$GITHUB_WORKSPACE/stl"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: case-stl
+          path: stl/*.stl
+          if-no-files-found: error
