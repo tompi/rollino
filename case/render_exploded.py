@@ -1,13 +1,14 @@
-"""Renders the exploded view (renders/exploded.png) in Blender (3.x): the
-case's pieces as OpenSCAD exports them, with KiCad's 3D models of the boards
-in place of the model's plain green ones. render_exploded.sh does the
-exports and runs this:
+"""Renders the assembled or the exploded view (renders/assembled.png,
+renders/exploded.png) in Blender (3.x): the case's pieces as OpenSCAD
+exports them, with KiCad's 3D models of the boards in place of the model's
+plain green ones. render_exploded.sh does the exports and runs this:
 
-  blender -b -P case/render_exploded.py -- export_dir out.png
+  blender -b -P case/render_exploded.py -- export_dir out.png [WIDTHxHEIGHT]
 
-export_dir has the pieces (<piece>.stl), the boards (sensor.wrl, base.wrl,
-exported with the board's origin as the user origin) and rollino.echo, the
-model's echo output with the boards' placements.
+export_dir has the pieces (<piece>.stl, pulled as far apart as the view
+wants: the model's explode_d), the boards (sensor.wrl, base.wrl, exported
+with the board's origin as the user origin) and rollino.echo, the model's
+echo output with the boards' placements.
 """
 
 import json
@@ -21,6 +22,7 @@ from mathutils import Matrix, Vector
 
 argv = sys.argv[sys.argv.index("--") + 1:]
 src, out = argv[0], argv[1]
+width, height = (int(v) for v in (argv[2] if len(argv) > 2 else "1200x1400").split("x"))
 
 echo = open(os.path.join(src, "rollino.echo")).read()
 place = json.loads(re.search(r'ECHO: "EXPLODED (\{.*\})"', echo).group(1).replace('\\"', '"'))
@@ -46,7 +48,8 @@ def material(name, colour, roughness=0.5, metallic=0.0):
 
 PIECES = [  # piece, colour, roughness, metallic
     ("body", "#d8d4cc", 0.6, 0), ("cover", "#b8b4ac", 0.6, 0), ("ball", "#b22222", 0.25, 0),
-    ("supports", "#f4f4f4", 0.2, 0), ("screws", "#696969", 0.35, 1), ("pouch", "#c0c0c0", 0.3, 1),
+    ("supports", "#f4f4f4", 0.2, 0), ("screws", "#696969", 0.35, 1),
+    ("sensor_covers", "#c8c4bc", 0.6, 0), ("sensor_screws", "#696969", 0.35, 1), ("pouch", "#c0c0c0", 0.3, 1),
     ("pcm", "#d4a017", 0.5, 0), ("leads", "#8b1a1a", 0.5, 0)]
 
 for name, colour, rough, metal in PIECES:
@@ -97,7 +100,7 @@ centre, size = (lo + hi) / 2, (hi - lo).length
 scene.render.engine = "CYCLES"
 scene.cycles.samples = 96
 scene.cycles.use_denoising = True
-scene.render.resolution_x, scene.render.resolution_y = 1200, 1400
+scene.render.resolution_x, scene.render.resolution_y = width, height
 # (the background goes on afterwards: under Filmic it would come out grey)
 scene.render.film_transparent = True
 world = bpy.data.worlds.new("world")

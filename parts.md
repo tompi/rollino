@@ -2,7 +2,8 @@ Parts list
 ==========
 
 Everything for one Rollino; quantities are totals (it has two sensor boards).
-The case itself (`body` and `base_cover` in `case/rollino.scad`) is printed.
+The case itself (`body`, `base_cover` and two of `sensor_cover` in
+`case/rollino.scad`) is printed.
 
 PCBs
 ----
@@ -26,10 +27,12 @@ Electronics
 | 2 | LM18-LSI lens | under each PMW3610 | the PMW3610's lens; often sold with it |
 | 2 | TI TPS7A0518PDBVR (1.8 V LDO, SOT-23-5) | sensor U2 | |
 | 4 | Hirose FH12-6S-0.5SH(55) (or JUSHUO AFC01-S06FCA) | sensor J1, base J1/J2 | 6-pin, 0.5 mm FPC connector |
-| 2 | 6-way FFC, 0.5 mm pitch, 50 mm, **opposite-side (type B) contacts** | sensor to base | for 0.3 mm thick FPC connectors (FH12); 50 mm is the stock length |
-| 1 | LiPo 602020, about 200 mAh, with protection board | on the XIAO's back | up to 22 x 20 x 6.5 mm; leads solder to the XIAO's battery pads |
+| 2 | 6-way FFC, 0.5 mm pitch, 50 mm, **same-side (type A) contacts** | sensor to base | for 0.3 mm thick FPC connectors (FH12); 50 mm is the stock length |
+| 1 | LiPo 602020, about 200 mAh, with protection board | pocket in the ring at the back of the case | up to 22 x 20 x 6.5 mm; goes in from below, protection board down; its leads run round in a groove to the XIAO's battery pads and need to be about 90 mm long (extend them if they are shorter) |
 
-Passives, all 0603, for both sensor boards together (10 V or more):
+Passives, all 0603, for both sensor boards together (10 V or more; the 10 uF
+X7R is the scarce one, for instance Murata GRM188Z71A106KA73D, and 6.3 V
+will do for it: PixArt asks for 6.3 to 16 V, 10 %):
 
 | Qty | Value | Where (on each sensor board) |
 |-----|-------|------------------------------|
@@ -50,9 +53,11 @@ Mechanical
 |-----|------|-------|
 | 1 | 55 mm trackball ball | the size Kensington's trackballs use (Expert Mouse, SlimBlade), sold as replacements |
 | 3 | 3 mm ceramic bearing balls (ZrO2 or Si3N4) | the ball's supports; get a few spares |
-| 4 | M2 x 8 countersunk thread-forming screws for plastic | through the cover and base board into the case |
-| 2 | M2 x 6 thread-forming screws for plastic, low (pan or wafer) head | one through each sensor board's ear |
+| 6 | M2 x 8 countersunk thread-forming screws for plastic | through the cover (four of them through the base board too) into the case |
+| 4 | M2 x 10 thread-forming screws for plastic, pan head (up to 3.8 mm across) | two through each sensor cover and board |
 
 Screw lengths are from the model: the cover and base board are 5.2 mm
-together, with 4.5 mm pilot holes above them; each sensor board is 1.6 mm,
-with a 5 mm pilot hole behind it.
+together, with 4.5 mm pilot holes above them (the two screws beside the
+battery go through the cover only, into holes as much deeper); each sensor
+cover is 3.5 mm under the screw heads and each sensor board 1.6 mm, with a
+5.5 mm pilot hole behind it (without the covers, M2 x 6 would do).

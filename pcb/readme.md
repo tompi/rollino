@@ -12,20 +12,27 @@ Java, Blender 3.x and ImageMagick for routing and rendering):
 
 ```
 PY=/Applications/KiCad/KiCad.app/Contents/Frameworks/Python.framework/Versions/Current/bin/python3
-$PY pcb/gen/generate.py     # schematics, footprints placed on their nets
-$PY pcb/gen/route.py        # Freerouting routes every net, GND poured on both layers
+$PY pcb/gen/generate.py     # schematics, footprints placed on their nets, the tracks that matter laid
+$PY pcb/gen/route.py        # Freerouting routes the rest, GND poured on both layers and stitched
 pcb/gen/render_pcbs.sh      # the renders above, the layout images and schematic PDFs
 ```
 
 They overwrite the projects, so make changes in the scripts rather than the
 KiCad files, or stop using them once you start editing the boards by hand.
 
-Both boards are routed (0.2 mm tracks, 0.15 mm clearance, 0.3 mm from the
-edges, 0.6/0.3 mm vias) and pass DRC with nothing to report, warnings
-included (`kicad-cli pcb drc --schematic-parity --severity-all`); the
-schematics pass ERC. The sensor board's references are on its fab layer
-only, as are the base board's test points' (their labels name them): the
-silkscreen has no room for them.
+Both boards are routed (0.2 mm tracks, wider where it matters, 0.15 mm
+clearance, 0.3 mm from the edges, 0.6/0.3 mm vias) and pass DRC with nothing
+to report, warnings included (`kicad-cli pcb drc --schematic-parity
+--severity-all`); the schematics pass ERC. `route.py` checks that itself: it
+only saves a board with nothing left unconnected and nothing for the DRC to
+report, and fails otherwise. The sensor board's references are on its fab
+layer only, as are the base board's test points' (their labels name them):
+the silkscreen has no room for them.
+
+Freerouting 1.5 can't start a track from the base board's FPC connectors
+(their pads are 10 degrees off the board's axes) and would leave them
+unconnected, so `generate.py` lays a short track out of each pad and
+`route.py` has Freerouting join those up instead.
 
 Sensor board (`sensor/`, two needed)
 --------------------------------------
@@ -34,9 +41,12 @@ Sensor board (`sensor/`, two needed)
 
 [Schematic (PDF)](sensor/rollino-sensor-schematic.pdf)
 
-The same board for both sensors. It's screwed into its pod from the ball
-side, chip side out, lens towards the ball; the case's pocket matches its
-outline, ear included.
+The same board for both sensors. It lies on its side (the chip's long axis
+horizontal, the connector end towards the front of the case), so the left
+one is turned half a turn from the right one. It's screwed into its pod from
+the ball side with two M2 screws, chip side out, lens towards the ball; the
+case's pocket matches its outline, ear included, and a printed cover with a
+window for the lens goes in on top of it, under the same two screws.
 
 - PMW3610DM-SUDU + LM18-LSI lens: circuit and footprint (with the lens cutout)
   after [badjeff/pmw3610-pcb](https://github.com/badjeff/pmw3610-pcb)
@@ -44,21 +54,34 @@ outline, ear included.
 - TPS7A0518 1.8 V LDO for the sensor's core: 1 uA quiescent, instead of the
   ~34 uA of the TLV74318 used there, which would otherwise draw more than the
   resting sensor
-- FH12-6S-0.5SH FPC connector at the board's up-slope end, mouth facing off
+- each capacitor is by the pin it serves, on a short wide track laid by
+  `generate.py`: C4 under the charge pump's two pins and C6/C7 under VCP's
+  (PixArt asks for those tracks to be under 5 mm long and over 20 mil wide:
+  they are 2 to 4 mm and 0.6 mm), C5 under the laser's, C2/C1 under VDD's,
+  C8/C3 by VDDIO's and C9 against the regulator's output; their grounds are
+  a rail from pin 11 with vias to the pour on the back
+- 1.8 V goes from the regulator to VDD on the back, round the lens cutout's
+  short end
+- TP1 (+1V8) and TP2 (GND): pads for a meter when bringing a board up
+- FH12-6S-0.5SH FPC connector at the board's front end, mouth facing off
   the edge, so the ribbon is easy to push in and latch before the board goes
-  into its pod; the ribbon then bends back over the connector and runs over
-  the chip's back to the base board (the pod has room for the bend)
+  into its pod; the ribbon then bends back over the connector and the chip,
+  where it is folded (a 45 degree crease, flat) to run down the slope, past
+  the board's low edge, to the base board (the pod has room for the bend and
+  a channel for the ribbon)
+- two mounting holes either side of the lens: H1 in an ear on the back end,
+  on the board's centre line, and H2 beside the connector. Nothing sticks
+  out of one long side only, so the board fits either way up the slope
 - the ribbon's way down through the pod is roomy (5.5 mm wide, the case
   checks it with a 1.5 mm thick stand-in: `part="fpc_check"` must be empty),
   so its free end can be fed through from the pod or from underneath before
   the boards go in
 - the regulator's EN is tied to its VIN by a fixed track between its rows of
   pins (route.py keeps it): the board edge leaves no other way in
-- a small ROLLINO logo in bare copper on the back, between the edge and the
-  lens
-- board frame: origin on the optical axis, x down the slope (towards the
-  table), y sideways; nothing goes behind the ear (y beyond -7.9 mm, x
-  -6.9..-0.9), where the case has the screw boss
+- a small ROLLINO logo in bare copper on the back, between the front edge
+  and the lens
+- board frame: origin on the optical axis, x along the chip (towards the
+  back of the case), y across it
 
 Base board (`base/`)
 --------------------
@@ -67,30 +90,46 @@ Base board (`base/`)
 
 [Schematic (PDF)](base/rollino-base-schematic.pdf)
 
-Lies in a groove in the case's underside, held (with the cover under it) by
-four M2 screws.
+Lies in a groove in the case's underside, under the front pod and a little
+way round each side, held (with the cover under it) by four M2 screws.
 
 - Seeed XIAO nRF52840 soldered **upside down** by its castellated edges: its
   parts (USB-C included) hang through the cutout into a pocket in the cover;
-  its battery pads face up, and the LiPo's leads solder straight onto them
+  its battery pads face up, and the LiPo's leads (which come round from the
+  battery's pocket in the ring at the back of the case, and up behind the XIAO's far
+  corner) solder straight onto them
 - J1 (right sensor) and J2 (left) at the band's ends, along it, mouths facing
   the ribbons coming along the channel in the case's underside
 - TP1-TP3: optional buttons (left, middle, right click) to TP4 (GND)
-- the ROLLINO logo is bare copper (no solder mask) on the back of the band
-- pins as in the firmware (`zmk/boards/shields/rollino/rollino.overlay`)
+- the ROLLINO logo is bare copper (no solder mask) on the back, beside the
+  XIAO
+- the XIAO's chip antenna is at its far end, inside the notch and a fraction
+  of a millimetre from this board: the pours stay off the strip between the
+  notch and the ball's hole and away from the XIAO's last few millimetres,
+  and the four tracks that have to cross that strip (the bus and the supply,
+  to the left sensor) keep a millimetre from the notch; the supply's two,
+  the only thing joining the two halves' ground, are laid by `generate.py`
+  on the back
+- pins as in the firmware (`zmk/boards/shields/rollino/rollino.overlay`): the
+  bus on D4/D5, the XIAO's only pins that aren't next to its radio, and each
+  sensor's own lines and each button on the pins of their side
 
 Ribbons
 -------
 
 Two 6-way 0.5 mm FFCs, 50 mm long (the stock length: 40 mm ones are hard
-to find), with opposite-side (type B) contacts. Each comes down from its
-sensor pod under the band's old end, turns in, and with one crease (about
-45 degrees, folded flat) lies along a channel in the case's underside,
-straight into the base board's connector at the end of the band; the case
-model sets where that is from the cable's length (`fpc_len`). The crease
-turns the ribbon over, hence type B. The pins at each end are numbered from
-the ribbon's path so that each signal meets itself: put the ribbon in, fold
-it at the crease and lay it in its channel before the base board goes up.
+to find), with same-side (type A) contacts. Each leaves its sensor board's
+connector towards the front, bends back over the connector and the chip, and
+is folded there (a 45 degree crease, pressed flat) to run down the slope
+over the chip's back. Past the board's low edge it turns in under the board,
+lying on the cover, and with a second crease turns towards the front, along
+a channel in the case's underside, straight into the base board's connector
+at the end of the band; the case model sets where that is from the cable's
+length (`fpc_len`). The U-turn, the fold and the crease each turn the ribbon
+over, which leaves the face that met the sensor board's connector facing the
+base board's: hence type A. The pins at each end are numbered from the
+ribbon's path so that each signal meets itself: put the ribbon in, fold it
+and lay it in its channel before the base board goes up.
 
 Parts
 -----
