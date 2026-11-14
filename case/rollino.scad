@@ -26,7 +26,7 @@
 // sensor_cover (print two) |
 // base_pcb / sensor_pcb (2D board outlines, for ../pcb/gen/generate.py) |
 // fpc_check / wall_check / usb_check (all should come out empty)
-part = "assembly";
+part = "body";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 // part="exploded" draws only this piece of it, if set (body, ball,
@@ -197,7 +197,7 @@ elec_size = [xiao.x + usb_overhang + 0.6, xiao.y + 0.6, xiao.z + xiao_pads + xia
 // ball's hole, for the tracks that cross from one side to the other
 xiao_strip = 3.2;
 // the PCB cutout under the XIAO leaves its castellated pads this much to sit on
-xiao_pad_w = 1.5;
+xiao_pad_w = 1.2;
 // the pod's outline is a circle this wide (seen from above), swelling out
 // of the rim; it is this high, flat on top, its edge rounded this much
 elec_dome_d = 46;
@@ -423,7 +423,9 @@ ring_a0 = min([for (b = pod_balls) if (b.x < 0) let(q = board_pt(sensor_az_[0], 
 module ring_profile() {
   hull() {
     for (p = ring_pts) translate([p[0], p[1]]) circle(r = pod_r, $fn = 48);
-    translate([R - 4, 0]) square([rim_wall + 4, rim_h]);
+    // down to the rim's own rounded foot
+    translate([R - 4, 0]) square([4, rim_h]);
+    translate([R + rim_wall - ring_rim_r, ring_rim_r]) circle(r = ring_rim_r, $fn = 32);
   }
 }
 
@@ -455,11 +457,16 @@ module ring_station(s, az) {
   g = front_g(az);
   rf = ring_rim_r + (elec_pod_r - ring_rim_r) * g;
   for (p = ring_pts) {
-    f = [p[2] ? R + rim_wall + front_bump(az) - rf : R + ball_clear,
+    // (the inner ones well inside the ball's cut, so the top runs right up
+    // to the cup with no ledge)
+    f = [p[2] ? R + rim_wall + front_bump(az) - rf : R - 8,
          p[3] ? rim_h + (elec_pod_h - rim_h) * g - rf : rf];
     translate(polar_pt(s * az, f[0] + (p[0] - f[0]) * w, f[1] + (p[1] - f[1]) * w))
       sphere(r = rf + (pod_r - rf) * w, $fn = 32);
   }
+  // the foot of the rim (or the front pod), so the underside runs down to
+  // the table in one sweep like the full ring's
+  translate(polar_pt(s * az, R + rim_wall + front_bump(az) - rf, rf)) sphere(r = rf, $fn = 32);
 }
 
 module back_ring() {
@@ -732,7 +739,7 @@ module base_cover() {
     }
     ball_cuts();
     usb_recess();
-    xiao_cutout(xiao_parts_h - base_pcb_t + 0.2 + eps, xiao_parts_h - base_pcb_t + 0.2);
+    xiao_cutout(xiao_parts_h - base_pcb_t + 0.5 + eps, xiao_parts_h - base_pcb_t + 0.5);
     // (the model lies upside down: see electronics())
     at_elec() translate([0.3 + usb_overhang + xiao_reset.x, elec_size.y / 2 - xiao_reset.y, -elec_floor - 1])
       cylinder(d = reset_hole_d, h = elec_floor + 1, $fn = 24);

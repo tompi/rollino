@@ -276,15 +276,16 @@ def write_footprints():
 
     # XIAO nRF52840 soldered upside down by its castellated edges: Seeed's
     # SMD footprint's edge pads, mirrored across the board's long axis, and
-    # only reaching in as far as the cutout for its parts allows. Origin at
+    # only reaching in as far as the cutout for its parts allows (0.3 from its
+    # edge, which is xiao_pad_w = 1.2 in from the board's). Origin at
     # the board's centre, USB end towards -y.
     pads = []
     for n in range(1, 15):
         if n <= 7:
-            x, y = 8.65, -7.545 + (n - 1) * 2.54
+            x, y = 8.8, -7.545 + (n - 1) * 2.54
         else:
-            x, y = -8.65, -7.545 + (14 - n) * 2.54
-        pads.append('  (pad "%d" smd roundrect (at %g %g) (size 1.9 1.6) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25))' % (n, x, y))
+            x, y = -8.8, -7.545 + (14 - n) * 2.54
+        pads.append('  (pad "%d" smd roundrect (at %g %g) (size 1.6 1.6) (layers "F.Cu" "F.Paste" "F.Mask") (roundrect_rratio 0.25))' % (n, x, y))
     text = '''(footprint "XIAO_nRF52840_upside_down" (version 20240108) (generator "rollino-gen") (generator_version "8.0")
   (layer "F.Cu")
   (descr "Seeed XIAO nRF52840 soldered upside down (component side down, its parts in a cutout in this board) by its castellated edge pads; USB end towards -y. Pads from Seeed's XIAO-nRF52840-SMD footprint, mirrored.")
@@ -295,8 +296,8 @@ def write_footprints():
   (fp_rect (start -9.75 -12.2) (end 9.75 10.75) (stroke (width 0.05) (type default)) (fill none) (layer "F.CrtYd"))
   (fp_rect (start -4.5 -12.05) (end 4.5 -10.475) (stroke (width 0.1) (type default)) (fill none) (layer "F.Fab"))
   (fp_text user "USB-C" (at 0 -9 0) (layer "F.Fab") (effects (font (size 1 1) (thickness 0.15))))
-  (fp_line (start -8.9 10.475) (end -7.7 10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
-  (fp_line (start 7.7 10.475) (end 8.9 10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
+  (fp_line (start -8.9 10.475) (end -8.1 10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
+  (fp_line (start 8.1 10.475) (end 8.9 10.475) (stroke (width 0.15) (type default)) (layer "F.SilkS"))
   (fp_circle (center 10.2 -7.545) (end 10.45 -7.545) (stroke (width 0.5) (type solid)) (fill solid) (layer "F.SilkS"))
 %s
 %s)
