@@ -9,6 +9,11 @@
  * n x e. Under the finger, on top of the ball, the surface moves at
  * w x Rz = (Rw_y, -Rw_x, 0): that is the pointer motion; Rw_z is the twist.
  *
+ * With no buttons, a quick wiggle of the ball (twisting it back and forth)
+ * manages the Bluetooth profiles: gesture-next strokes or more switch to the
+ * next profile, gesture-clear or more forget the current profile's host, so
+ * it can pair again. See twist_gesture.h.
+ *
  * SPDX-License-Identifier: MIT
  */
 
@@ -23,6 +28,12 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/spinlock.h>
 #include <zephyr/sys/util.h>
+
+#if IS_ENABLED(CONFIG_ZMK_BLE)
+#include <zmk/ble.h>
+#endif
+
+#include "twist_gesture.h"
 
 LOG_MODULE_REGISTER(ball_fusion, CONFIG_INPUT_LOG_LEVEL);
 
@@ -42,6 +53,10 @@ struct ball_fusion_config {
 	int32_t twist_ratio;
 	int32_t period_ms;
 	bool invert_scroll;
+	int32_t gesture_stroke;
+	int32_t gesture_gap_ms;
+	int32_t gesture_next;
+	int32_t gesture_clear;
 };
 
 struct ball_fusion_data {
@@ -54,7 +69,14 @@ struct ball_fusion_data {
 	/* fractions of a count not reported yet */
 	float rem[3];
 	struct k_work_delayable work;
+	/* the profile gesture (both works run on the system work queue, so
+	 * they don't need the lock for it) */
+	struct twist_gesture gesture;
+	struct k_work_delayable gesture_work;
 };
+
+/* from the fourth stroke of a wiggle on, it's likely a gesture: stop scrolling */
+#define GESTURE_HOLD_SCROLL 4
 
 /* what a sensor's input callback needs: the fusion device and which sensor */
 struct ball_fusion_ref {
@@ -119,7 +141,18 @@ static void ball_fusion_work_handler(struct k_work *work)
 	float twist = fabsf(out[2]);
 
 	if (twist * 100.0f > (float)cfg->twist_ratio * rolling) {
-		data->rem[2] += out[2] / (float)cfg->scroll_divisor * (cfg->invert_scroll ? -1.0f : 1.0f);
+		if (cfg->gesture_next > 0 &&
+		    twist_gesture_feed(&data->gesture, out[2], (float)cfg->gesture_stroke,
+				       cfg->gesture_gap_ms, k_uptime_get())) {
+			/* look again once the wiggle may be over */
+			k_work_reschedule(&data->gesture_work, K_MSEC(cfg->gesture_gap_ms + 1));
+		}
+		if (data->gesture.strokes >= GESTURE_HOLD_SCROLL) {
+			data->rem[2] = 0.0f;
+		} else {
+			data->rem[2] += out[2] / (float)cfg->scroll_divisor *
+					(cfg->invert_scroll ? -1.0f : 1.0f);
+		}
 	} else {
 		data->rem[0] += out[0] * (float)cfg->pointer_scale / 100.0f;
 		data->rem[1] += out[1] * (float)cfg->pointer_scale / 100.0f;
@@ -144,6 +177,29 @@ static void ball_fusion_work_handler(struct k_work *work)
 	}
 }
 
+static void ball_fusion_gesture_handler(struct k_work *work)
+{
+	struct k_work_delayable *dwork = k_work_delayable_from_work(work);
+	struct ball_fusion_data *data = CONTAINER_OF(dwork, struct ball_fusion_data, gesture_work);
+	const struct ball_fusion_config *cfg = data->dev->config;
+	uint8_t strokes = twist_gesture_take(&data->gesture, cfg->gesture_gap_ms, k_uptime_get());
+
+	if (strokes == 0) {
+		return;
+	}
+	if (cfg->gesture_clear > 0 && strokes >= cfg->gesture_clear) {
+		LOG_INF("wiggle of %d strokes: forgetting this profile's host", strokes);
+#if IS_ENABLED(CONFIG_ZMK_BLE)
+		zmk_ble_clear_bonds();
+#endif
+	} else if (strokes >= cfg->gesture_next) {
+		LOG_INF("wiggle of %d strokes: next profile", strokes);
+#if IS_ENABLED(CONFIG_ZMK_BLE)
+		zmk_ble_prof_next();
+#endif
+	}
+}
+
 static int ball_fusion_init(const struct device *dev)
 {
 	const struct ball_fusion_config *cfg = dev->config;
@@ -152,6 +208,7 @@ static int ball_fusion_init(const struct device *dev)
 
 	data->dev = dev;
 	k_work_init_delayable(&data->work, ball_fusion_work_handler);
+	k_work_init_delayable(&data->gesture_work, ball_fusion_gesture_handler);
 
 	for (int i = 0; i < NUM_SENSORS; i++) {
 		const struct ball_fusion_sensor_config *s = &cfg->sensors[i];
@@ -260,6 +317,10 @@ static int ball_fusion_init(const struct device *dev)
 		.twist_ratio = DT_INST_PROP(n, twist_ratio),                               \
 		.period_ms = DT_INST_PROP(n, period_ms),                                   \
 		.invert_scroll = DT_INST_PROP(n, invert_scroll),                           \
+		.gesture_stroke = DT_INST_PROP(n, gesture_stroke),                         \
+		.gesture_gap_ms = DT_INST_PROP(n, gesture_gap_ms),                         \
+		.gesture_next = DT_INST_PROP(n, gesture_next),                             \
+		.gesture_clear = DT_INST_PROP(n, gesture_clear),                           \
 	};                                                                                 \
                                                                                             \
 	static struct ball_fusion_data ball_fusion_data_##n;                               \

@@ -49,6 +49,38 @@ properties:
       The sensors report independently; their motion is gathered for this
       long before it's combined and reported.
 
+  gesture-stroke:
+    type: int
+    default: 250
+    description: |
+      Profile gestures: a quick wiggle of the ball (twisting it back and
+      forth, each stroke starting within gesture-gap-ms of the last) manages
+      the Bluetooth profiles once it stops. This is how far (sensor counts of
+      twist at the ball's equator, as scroll-divisor) a twist one way has to
+      go to count as a stroke; 250 is about 16 degrees at 800 CPI.
+
+  gesture-gap-ms:
+    type: int
+    default: 400
+    description: |
+      A stroke more than this long after the last one starts the count
+      again; the wiggle is over (and acted on) once there's been none for
+      this long.
+
+  gesture-next:
+    type: int
+    default: 6
+    description: |
+      A wiggle of this many strokes or more (but fewer than gesture-clear)
+      switches to the next Bluetooth profile. 0 turns the gestures off.
+
+  gesture-clear:
+    type: int
+    default: 12
+    description: |
+      A wiggle of this many strokes or more forgets the current profile's
+      host, so it advertises to pair again. 0 leaves this one out.
+
 child-binding:
   description: |
     One sensor, and where it sits on the ball. Directions are as in the case

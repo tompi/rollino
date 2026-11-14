@@ -55,6 +55,22 @@ a standalone Bluetooth/USB mouse.
   dragged it), twisting about the vertical axis scrolls.
 - `config/rollino.keymap` - the buttons: left, middle, right click.
 
+**Bluetooth profiles, without buttons.** It keeps three profiles (hosts).
+Wiggle the ball - twist it quickly back and forth, a flick of about 20
+degrees each way, with no pause - and it acts when you stop:
+
+- 6 to 11 flicks (about a second): switch to the next profile. One that has
+  no host yet advertises, so a new computer can pair with it.
+- 12 or more (two seconds or so): forget the current profile's host and
+  advertise again, to pair it afresh.
+
+Scrolling stops from the fourth flick, so the page doesn't jump about.
+Slow scrolling back and forth never adds up to a gesture (a flick more
+than 0.4 s after the last starts the count again). The thresholds are the
+`gesture-*` properties of the shield's `ball_fusion` node. To forget every
+host at once, flash the `settings_reset` firmware from the same build, then
+`rollino` again.
+
 | XIAO pin | Use |
 |----------|-----|
 | D4 | SCLK, both sensors |
