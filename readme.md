@@ -8,7 +8,7 @@ Two PMW3610 sensors look up at the ball from below its equator, placed so
 their lines of sight are orthogonal (X, Y and twist are all observable);
 their boards lie on their sides in a low ring round the back half of the
 ball, each behind a printed cover that follows the ball and has a window for
-the lens. A Seeed XIAO nRF52840 running ZMK lies flat under a low dome in front of
+the lens. A Seeed XIAO nRF52840 running ZMK lies flat in a low pod that swells out of the rim in front of
 the ball, soldered upside down onto a base PCB that sits in a groove in the
 underside; an FPC ribbon runs from each sensor board to it. The 602020 LiPo
 stands in the same ring, between the two sensors and away from the XIAO's

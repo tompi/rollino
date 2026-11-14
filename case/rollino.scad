@@ -6,7 +6,7 @@
 // ~90 deg apart, so X, Y and twist are all observable. The sensor boards lie
 // on their sides (the chip's long axis horizontal, its connector end towards
 // the front), which keeps the pods low.
-// A XIAO nRF52840 lies flat in a low squashed-sphere pod at the front,
+// A XIAO nRF52840 lies flat in a low, flat pod that swells out of the rim at the front,
 // USB-C pointing forward. It is soldered to a base PCB that sits in a groove
 // in the case's underside and reaches a little way round each side, where an
 // FPC ribbon comes in from the sensor board. The LiPo is at the back, well
@@ -26,7 +26,7 @@
 // sensor_cover (print two) |
 // base_pcb / sensor_pcb (2D board outlines, for ../pcb/gen/generate.py) |
 // fpc_check / wall_check / usb_check (all should come out empty)
-part = "body";
+part = "assembly";
 // azimuth of the vertical cut plane for part="section"
 section_az = 135;
 // part="exploded" draws only this piece of it, if set (body, ball,
@@ -67,6 +67,8 @@ shell_r = 4;
 // rounding of the ring round the back of the ball, which holds the sensor
 // boards and the battery
 pod_r = 6;
+// how far round (degrees) each end of that ring takes to melt into the rim
+ring_taper = 42;
 
 /* [Sensors: PMW3610 + LM18-LSI] */
 // true: put the sensors as low as floor_z allows
@@ -196,9 +198,13 @@ elec_size = [xiao.x + usb_overhang + 0.6, xiao.y + 0.6, xiao.z + xiao_pads + xia
 xiao_strip = 3.2;
 // the PCB cutout under the XIAO leaves its castellated pads this much to sit on
 xiao_pad_w = 1.5;
-// the pod's outer is a squashed sphere this wide (seen from above), as low
-// as it can be while covering the cavity
+// the pod's outline is a circle this wide (seen from above), swelling out
+// of the rim; it is this high, flat on top, its edge rounded this much
 elec_dome_d = 46;
+elec_pod_h = 12;
+elec_pod_r = 4;
+// radius of the fillets (seen from above) where the pod's outline meets the rim's
+front_fillet = 30;
 // how far the dome's centre sits behind the cavity's, towards the ball, so
 // less of it sticks out in front (the cavity itself stays put)
 elec_dome_back = 3.5;
@@ -399,28 +405,67 @@ module sensor_pod_outer() { hull() for (b = pod_balls) translate(b) sphere(r = p
 // The ring: what a sensor board's pillow sweeps out when it is turned round
 // the ball's axis, from one sensor's front end round the back to the
 // other's; its section ([radius, z] of the pillow's balls) is hulled with
-// the rim's. The pillows themselves are flat, so each sticks out of the
-// ring's end a little, as a rounded nose.
+// the rim's. From each end the same section is swept on round the front,
+// one station every couple of degrees: over ring_taper degrees it shrinks,
+// eased at both ends, to the rim's own section, and towards the front that
+// swells out again, as smoothly, into the low front pod. So the outside is
+// one surface, with no crease where the ring, the rim and the front pod meet.
 ring_xs = concat([0], [for (i = [0 : 6]) pod_x[0] + pod_r + (pod_x[1] - pod_x[0] - 2 * pod_r) * i / 6]);
 function ring_rz(p) = let(q = board_pt(sensor_az_[0], p)) [norm([q.x, q.y]), q.z];
-ring_pts = [for (x = ring_xs, y = [-1, 1] * (pod_y - pod_r), o = [0, 1]) ring_rz([x, y, o ? pod_z - pod_r : cup_z(x, y)])];
+// each ball's [radius, z, on the outside (not the cup), upper]
+ring_rim_r = 1.5;
+ring_pts = [for (x = ring_xs, y = [-1, 1] * (pod_y - pod_r), o = [0, 1])
+  concat(ring_rz([x, y, o ? pod_z - pod_r : cup_z(x, y)]), [o, y > 0 ? 1 : 0])];
 ring_top = max([for (p = ring_pts) p[1]]) + pod_r;
-// the ring ends at the azimuth of the pillow's outermost front corner
-ring_a1 = max([for (b = pod_balls) if (b.x < 0) let(q = board_pt(sensor_az_[0], b)) atan2(q.x, -q.y)]);
+// the full ring reaches a little past the pillow's foremost corner
+ring_a0 = min([for (b = pod_balls) if (b.x < 0) let(q = board_pt(sensor_az_[0], b)) atan2(q.x, -q.y)]) - 3;
 
 module ring_profile() {
   hull() {
-    for (p = ring_pts) translate(p) circle(r = pod_r, $fn = 48);
+    for (p = ring_pts) translate([p[0], p[1]]) circle(r = pod_r, $fn = 48);
     translate([R - 4, 0]) square([rim_wall + 4, rim_h]);
   }
 }
 
-module back_ring() {
-  rotate([0, 0, ring_a1 - 90]) rotate_extrude(angle = 360 - 2 * ring_a1) ring_profile();
-  for (s = [1, -1]) hull() {
-    for (p = ring_pts) translate(polar_pt(s * ring_a1, p[0], p[1])) sphere(r = pod_r, $fn = 32);
-    at_board(sensor_az_[s > 0 ? 0 : 1]) for (b = pod_balls) if (b.x < 0) translate(b) sphere(r = pod_r, $fn = 48);
+// The front pod's outline is a circle (elec_dome_d across, seen from
+// above), joined to the rim's by a fillet (an arc of radius front_fillet,
+// tangent to both) at the waist either side: how far that outline reaches
+// beyond the rim at an azimuth (az >= 0)
+dome_c = -at_elec_pt([elec_size.x / 2 + elec_dome_back, elec_size.y / 2, 0]).y;
+front_m = R + rim_wall + front_fillet;
+// azimuths of the fillet's centre (where it leaves the rim) and of where it
+// meets the pod's circle
+front_az0 = acos((pow(front_m, 2) + pow(dome_c, 2) - pow(elec_dome_d / 2 + front_fillet, 2)) / (2 * front_m * dome_c));
+front_az1 = let(cf = front_m * [sin(front_az0), -cos(front_az0)], cd = [0, -dome_c],
+                t = cd + (cf - cd) * (elec_dome_d / 2) / (elec_dome_d / 2 + front_fillet)) atan2(t.x, -t.y);
+front_az = [front_az0, front_az1];
+function front_bump(az) =
+  az >= front_az[0] ? 0
+  : az >= front_az[1] ? front_m * cos(front_az[0] - az) - sqrt(pow(front_fillet, 2) - pow(front_m * sin(front_az[0] - az), 2)) - (R + rim_wall)
+  : dome_c * cos(az) + sqrt(pow(elec_dome_d / 2, 2) - pow(dome_c * sin(az), 2)) - (R + rim_wall);
+// 0 where the section is the rim's, 1 where it is the front pod's
+function front_g(az) = let(x = min(1, front_bump(az) / 8)) x * x * (3 - 2 * x);
+// how much of the ring's section is left at an azimuth
+function ring_w(az) = az >= ring_a0 ? 1 : az <= ring_a0 - ring_taper ? 0
+  : (1 - cos(180 * (az - ring_a0 + ring_taper) / ring_taper)) / 2;
+
+// the section at azimuth s * az (az >= 0), as balls
+module ring_station(s, az) {
+  w = ring_w(az);
+  g = front_g(az);
+  rf = ring_rim_r + (elec_pod_r - ring_rim_r) * g;
+  for (p = ring_pts) {
+    f = [p[2] ? R + rim_wall + front_bump(az) - rf : R + ball_clear,
+         p[3] ? rim_h + (elec_pod_h - rim_h) * g - rf : rf];
+    translate(polar_pt(s * az, f[0] + (p[0] - f[0]) * w, f[1] + (p[1] - f[1]) * w))
+      sphere(r = rf + (pod_r - rf) * w, $fn = 32);
   }
+}
+
+module back_ring() {
+  rotate([0, 0, ring_a0 - 90]) rotate_extrude(angle = 360 - 2 * ring_a0) ring_profile();
+  n = ceil(ring_a0 / 2);
+  for (s = [1, -1], i = [0 : n - 1]) hull() { ring_station(s, ring_a0 * i / n); ring_station(s, ring_a0 * (i + 1) / n); }
 }
 
 // the ribbon's channel from its fold down the slope, over the chip's back
@@ -484,9 +529,11 @@ module sensor_screws() {
 
 // ---------- electronics pod ----------
 
-// squashed sphere around the cavity + wall (sides and roof) + base: its
-// height is the lowest that still covers the (front) box corners at
-// elec_dome_d
+// The base PCB's tongue under the front pod takes its outline from this: a
+// squashed sphere around the cavity + wall (sides and roof) + base, its
+// height the lowest that still covers the (front) box corners at
+// elec_dome_d. (The pod itself is part of the swept outside: see
+// back_ring(), which is bigger than this all round.)
 elec_box = [elec_size.x + 2 * wall, elec_size.y + 2 * wall, elec_floor + elec_size.z + wall];
 elec_dome_r = [elec_dome_d / 2, elec_dome_d / 2,
   elec_box.z / 2 / sqrt(1 - (pow(elec_box.x + 2 * elec_dome_back, 2) + pow(elec_box.y, 2)) / pow(elec_dome_d, 2))];
@@ -630,10 +677,11 @@ pcb_screws = concat(
 cover_screws = [for (p = cover_screws_polar) polar2(p[0], p[1])];
 base_screws = concat(pcb_screws, cover_screws);
 
-// the case's foot where the cover meets it, less a wall: the PCB (and its
-// groove) stays inside this, so it never shows
+// the case's foot where the cover meets it (the rim and the front pod; the
+// ring only adds to it), less a wall: the PCB (and its groove) stays inside
+// this, so it never shows
 module base_inside() {
-  offset(delta = -wall) projection(cut = true) translate([0, 0, -floor_z - base_cover_t - 0.05]) body_outer();
+  offset(delta = -wall) projection(cut = true) translate([0, 0, -floor_z - base_cover_t - 0.05]) union() { rim(); elec_pod_blob(); }
 }
 
 // base PCB outline (world x/y, no holes), grown by m: the band, ending
@@ -777,7 +825,6 @@ module body_outer() {
   union() {
     rim();
     back_ring();
-    elec_pod_blob();
   }
 }
 
@@ -983,9 +1030,8 @@ else if (part == "wall_check") difference() {
 }
 
 echo(str("ball top z = ", zc + R, "  sensor el = ", sensor_el_, "  sensor az = ", sensor_az_,
-          "  elec pod top z = ", at_elec_pt([0, 0, -elec_floor + elec_box.z / 2]).z + elec_dome_r.z,
-          "  front y = ", at_elec_pt([elec_size.x / 2 + elec_dome_back, 0, 0]).y - elec_dome_r.x,
-          "  ring top z = ", ring_top, "  ring outer r = ", max([for (p = ring_pts) p[0]]) + pod_r, "  ring from az = ", ring_a1,
+          "  front pod top z = ", elec_pod_h, "  front y = ", -dome_c - elec_dome_d / 2,
+          "  ring top z = ", ring_top, "  ring outer r = ", max([for (p = ring_pts) p[0]]) + pod_r, "  ring from az = ", ring_a0, " tapering to ", ring_a0 - ring_taper,
           "  USB plug above table = ", base_top - usb_axis - usb_overmold.y / 2));
 // for laying out the base PCB (world x/y, mm; table at z=0)
 echo(str("base PCB: XIAO board corner at USB end, left = ", at_elec_pt([0.3 + usb_overhang, (elec_size.y + xiao.y) / 2, 0]),
