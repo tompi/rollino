@@ -304,6 +304,23 @@ def write_footprints():
 ''' % ("\n".join(pads), model_line("XIAO_nRF52840_upside_down"))
     open(os.path.join(pretty, "XIAO_nRF52840_upside_down.kicad_mod"), "w").write(text)
 
+    # a pair of through holes for an optional button's wires (or a 2.54 mm
+    # header): pin 1 the button's line (square), pin 2 GND along +y; no
+    # outline on the silkscreen, the board's label says what they are
+    text = '''(footprint "ButtonPads_1x02_P2.54mm" (version 20240108) (generator "rollino-gen") (generator_version "8.0")
+  (layer "F.Cu")
+  (descr "Two through holes 2.54 mm apart for a button's wires or a header: 1 the button's line, 2 GND")
+  (attr through_hole exclude_from_bom)
+  (property "Reference" "REF**" (at 0 -2.2 0) (layer "F.Fab") (effects (font (size 0.8 0.8) (thickness 0.12))))
+  (property "Value" "button" (at 0 4.7 0) (layer "F.Fab") (effects (font (size 0.8 0.8) (thickness 0.12))))
+  (fp_rect (start -1.27 -1.27) (end 1.27 3.81) (stroke (width 0.1) (type default)) (fill none) (layer "F.Fab"))
+  (fp_rect (start -1.1 -1.1) (end 1.1 3.64) (stroke (width 0.05) (type default)) (fill none) (layer "F.CrtYd"))
+  (pad "1" thru_hole rect (at 0 0) (size 1.7 1.7) (drill 1) (layers "*.Cu" "*.Mask"))
+  (pad "2" thru_hole circle (at 0 2.54) (size 1.7 1.7) (drill 1) (layers "*.Cu" "*.Mask"))
+)
+'''
+    open(os.path.join(pretty, "ButtonPads_1x02_P2.54mm.kicad_mod"), "w").write(text)
+
 
 # ---------------------------------------------------------------- schematic
 
@@ -856,13 +873,36 @@ def base(geo, symlib):
         az -= math.copysign(math.radians(19), az)
         b.text(side, kp((28.25 * math.sin(az), -28.25 * math.cos(az))), 1.2)
 
-    # optional buttons (to GND) and a GND pad, on the band near the front
-    for i, (net, az) in enumerate([("BTN_L", -30), ("BTN_M", -38), ("BTN_R", 30), ("GND", 38)]):
-        ref = "TP%d" % (i + 1)
-        u = sch.symbol(ref, "Connector:TestPoint", net, "TestPoint:TestPoint_Pad_D1.5mm", (60 + 20 * i, 145), {"1": net}, bom=False)
-        w = (27.5 * math.sin(math.radians(az)), -27.5 * math.cos(math.radians(az)))
-        b.footprint("TestPoint:TestPoint_Pad_D1.5mm", ref, net, kp(w), 0, {"1": net}, u, fab_ref=True)
-        b.text(net.replace("BTN_", ""), (kp(w)[0], kp(w)[1] - 2.0), 0.8)
+    # optional buttons: a pair of through holes for each (2.54 mm apart, so
+    # wires or a header), the button's line and GND. Left and right on the
+    # band's branches, in front of the screws (behind them the FPC
+    # connectors' tracks fill the inner side, and the sensors' buses the
+    # outer); the middle one across, just beside the XIAO's far left corner:
+    # the strip behind the XIAO has no room (the antenna's keepout, the
+    # supply's tracks), the buses come down its side further out and the
+    # logo is below. Each pair is turned a multiple of 45 degrees, or
+    # route.py would leave its pads to stubs that aren't there (see route_once)
+    def on_band(az, r):
+        a = math.radians(az)
+        return kp((r * math.sin(a), -r * math.cos(a)))
+
+    pairs = [("BTN_L", on_band(-38, 27), None),
+             ("BTN_M", (-15.3, end + 0.2), -90),
+             ("BTN_R", on_band(38, 27), None)]
+    for i, (net, p1, rot) in enumerate(pairs):
+        ref = "J%d" % (i + 3)
+        value = net.replace("BTN_", "button ")
+        u = sch.symbol(ref, "Connector_Generic:Conn_01x02", value, "rollino:ButtonPads_1x02_P2.54mm",
+                       (60 + 25 * i, 145), {"1": net, "2": "GND"}, bom=False)
+        # GND outwards across the band, or as given; the footprint's pin 2
+        # is 2.54 along its +y, turned by rot
+        if rot is None:
+            rot = round(math.degrees(math.atan2(p1[0], p1[1])) / 45) * 45
+        p2 = (p1[0] + 2.54 * math.sin(math.radians(rot)), p1[1] + 2.54 * math.cos(math.radians(rot)))
+        b.footprint("rollino:ButtonPads_1x02_P2.54mm", ref, value, p1, rot, {"1": net, "2": "GND"}, u, fab_ref=True)
+        # its label beside the button's hole, on the side away from GND
+        lx, ly = 2 * p1[0] - p2[0], 2 * p1[1] - p2[1]
+        b.text(net.replace("BTN_", ""), (p1[0] + (lx - p1[0]) * 0.9, p1[1] + (ly - p1[1]) * 0.9), 0.8)
 
     for i, w in enumerate(pos["screws"]):
         u = sch.symbol("H%d" % (i + 1), "Mechanical:MountingHole", "M2", "MountingHole:MountingHole_2.2mm_M2",

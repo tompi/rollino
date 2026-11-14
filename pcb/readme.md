@@ -100,7 +100,11 @@ way round each side, held (with the cover under it) by four M2 screws.
   corner) solder straight onto them
 - J1 (right sensor) and J2 (left) at the band's ends, along it, mouths facing
   the ribbons coming along the channel in the case's underside
-- TP1-TP3: optional buttons (left, middle, right click) to TP4 (GND)
+- J3-J5: optional buttons (left, middle, right click), a pair of through
+  holes each (2.54 mm apart, for wires or a header): the square one the
+  button's line, the round one GND. Left and right on the branches, in
+  front of the screws; middle beside the XIAO's far left corner (the strip
+  behind the XIAO is the antenna's)
 - the ROLLINO logo is bare copper (no solder mask) on the back, beside the
   XIAO
 - the XIAO's chip antenna is at its far end, inside the notch and a fraction

@@ -44,7 +44,8 @@ will do for it: PixArt asks for 6.3 to 16 V, 10 %):
 | 2 | 10 k resistor | R1 |
 
 Optional: up to three momentary switches for left, middle and right click,
-wired from the base board's TP1-TP3 pads to TP4 (GND).
+wired to the base board's J3-J5 (a pair of through holes each: the square
+one the button's line, the round one GND).
 
 Mechanical
 ----------
